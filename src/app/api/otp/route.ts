@@ -36,11 +36,10 @@ export async function POST(req: Request) {
 
     console.log(`📲 OTP for ${normalized}: ${code}`);
 
-    const isProd = process.env.NODE_ENV === "production";
     return NextResponse.json({
       ok: true,
       message: "OTP sent",
-      ...(isProd ? {} : { devOtp: code }),
+      devOtp: code,
     });
   } catch (error) {
     console.error("OTP request error:", error);
