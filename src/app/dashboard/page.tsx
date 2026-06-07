@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { getDashboardData } from "@/lib/data";

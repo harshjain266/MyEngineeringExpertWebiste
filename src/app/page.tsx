@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { SiteHeader } from "@/components/landing/site-header";
 import { Hero } from "@/components/landing/hero";
 import { ExamCategories } from "@/components/landing/exam-categories";

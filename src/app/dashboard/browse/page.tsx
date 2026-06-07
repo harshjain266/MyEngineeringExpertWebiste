@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import type { Metadata } from "next";
 import { getCourses } from "@/lib/data";
 import { BrowseCoursesClient } from "./browse-client";

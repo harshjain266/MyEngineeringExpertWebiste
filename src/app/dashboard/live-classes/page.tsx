@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import type { Metadata } from "next";
 import { getAllLiveClasses } from "@/lib/data";
 import { LiveClassCard } from "@/components/dashboard/live-class-card";

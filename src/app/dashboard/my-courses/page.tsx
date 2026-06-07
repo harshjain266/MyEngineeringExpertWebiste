@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import type { Metadata } from "next";
 import { BookOpen, PlayCircle } from "lucide-react";
 import Image from "next/image";
