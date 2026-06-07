@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String           @id @default(cuid())
+  name        String           @default("Student")
+  email       String?          @unique
+  avatar      String?
+  role        Role             @default(student)
+  plan        Plan             @default(free)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  password    String?
+  phone       String?          @unique
+  enrollments Enrollment[]
+  progress    LessonProgress[]
+  orders      Order[]
+  wishlist    Wishlist[]
+}
+
+model Instructor {
+  id          String      @id @default(cuid())
+  name        String
+  title       String
+  avatar      String?
+  rating      Float       @default(0)
+  students    Int         @default(0)
+  courses     Course[]
+  liveClasses LiveClass[]
+}
+
+model Course {
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  title         String
+  category      String
+  level         Level        @default(Beginner)
+  price         Int
+  originalPrice Int
+  rating        Float        @default(0)
+  ratingCount   Int          @default(0)
+  durationHours Int          @default(0)
+  lectures      Int          @default(0)
+  language      String       @default("English")
+  thumbnail     String?
+  badge         String?
+  tags          String[]
+  createdAt     DateTime     @default(now())
+  instructorId  String
+  program       String       @default("btech-bca")
+  plannerUrl    String?
+  popular       Boolean      @default(false)
+  instructor    Instructor   @relation(fields: [instructorId], references: [id])
+  enrollments   Enrollment[]
+  lessons       Lesson[]
+  wishlist      Wishlist[]
+
+  @@index([category, level])
+  @@index([program])
+}
+
+model Lesson {
+  id       String           @id @default(cuid())
+  title    String
+  order    Int
+  courseId String
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+}
+
+model Enrollment {
+  id           String   @id @default(cuid())
+  progress     Int      @default(0)
+  lastAccessed DateTime @default(now())
+  userId       String
+  courseId     String
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  userId      String
+  lessonId    String
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+}
+
+model LiveClass {
+  id           String     @id @default(cuid())
+  title        String
+  topic        String
+  startsAt     DateTime
+  endsAt       DateTime
+  status       LiveStatus @default(Upcoming)
+  instructorId String
+  instructor   Instructor @relation(fields: [instructorId], references: [id])
+}
+
+model Wishlist {
+  id       String @id @default(cuid())
+  userId   String
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  amount            Int
+  status            OrderStatus @default(Pending)
+  course            String
+  courseId          String?
+  planName          String?
+  razorpayOrderId   String?     @unique
+  razorpayPaymentId String?
+  createdAt         DateTime    @default(now())
+  userId            String
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Otp {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
+
+model Announcement {
+  id    String   @id @default(cuid())
+  title String
+  body  String
+  tone  String   @default("info")
+  date  DateTime @default(now())
+}
+
+enum Role {
+  student
+  instructor
+  admin
+}
+
+enum Plan {
+  free
+  premium
+}
+
+enum Level {
+  Beginner
+  Intermediate
+  Advanced
+}
+
+enum LiveStatus {
+  Upcoming
+  Live
+  Ongoing
+  Completed
+}
+
+enum OrderStatus {
+  Success
+  Failed
+  Pending
+}
