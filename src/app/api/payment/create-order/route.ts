@@ -23,6 +23,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
+    /* COMMENTED OUT RAZORPAY INTEGRATION FOR TESTING
     // Amount in paise (Razorpay requires smallest currency unit)
     const amountPaise = Math.round(amount * 100);
 
@@ -55,6 +56,37 @@ export async function POST(req: Request) {
       amount: amountPaise,
       currency: "INR",
       keyId: process.env.RAZORPAY_KEY_ID,
+    });
+    */
+
+    // DUMMY ENROLLMENT FOR TESTING
+    await prisma.$transaction(async (tx) => {
+      // 1. Create a successful order record
+      await tx.order.create({
+        data: {
+          userId,
+          amount,
+          status: "Success",
+          course: courseTitle,
+          courseId: courseId ?? null,
+          planName: planName ?? "Batch",
+          razorpayOrderId: `dummy_${Date.now()}`,
+          razorpayPaymentId: `pay_dummy_${Date.now()}`,
+        },
+      });
+
+      // 2. Create the enrollment
+      if (courseId) {
+        await tx.enrollment.upsert({
+          where: { userId_courseId: { userId, courseId } },
+          create: { userId, courseId, progress: 0 },
+          update: {},
+        });
+      }
+    });
+
+    return NextResponse.json({
+      dummySuccess: true,
     });
   } catch (err: any) {
     console.error("create-order error:", err);

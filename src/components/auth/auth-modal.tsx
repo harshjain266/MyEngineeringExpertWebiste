@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -13,13 +12,12 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Loader2, Phone, ShieldCheck, User, X } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail, User, X } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface OpenOptions {
-  /** Where to navigate after a successful login (e.g. a "Buy now" target). */
   redirectTo?: string;
 }
 
@@ -36,40 +34,31 @@ export function useAuthModal() {
   return ctx;
 }
 
-type Step = "phone" | "otp" | "name";
-
-const RESEND_SECONDS = 30;
+type Tab = "login" | "register";
 
 export function AuthModalProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [step, setStep] = useState<Step>("phone");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
+  const [tab, setTab] = useState<Tab>("login");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [devOtp, setDevOtp] = useState<string | null>(null);
-  const [resendIn, setResendIn] = useState(0);
+  const [success, setSuccess] = useState("");
   const redirectRef = useRef<string | undefined>(undefined);
 
   const reset = useCallback(() => {
-    setStep("phone");
-    setPhone("");
-    setOtp("");
+    setTab("login");
     setName("");
+    setEmail("");
+    setPassword("");
+    setShowPassword(false);
     setError("");
-    setDevOtp(null);
-    setResendIn(0);
+    setSuccess("");
     setLoading(false);
   }, []);
-
-  // Resend countdown — ticks while we're on the OTP step.
-  useEffect(() => {
-    if (step !== "otp" || resendIn <= 0) return;
-    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [step, resendIn]);
 
   const open = useCallback(
     (opts?: OpenOptions) => {
@@ -85,107 +74,71 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
     redirectRef.current = undefined;
   }, []);
 
-  const requestOtp = useCallback(async () => {
+  const handleLogin = useCallback(async () => {
     setError("");
-    const normalized = phone.replace(/\D/g, "");
-    if (normalized.length < 10) {
-      setError("Enter a valid 10-digit mobile number");
+    setSuccess("");
+    if (!email || !password) {
+      setError("Please enter your email and password");
       return;
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: normalized }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Could not send OTP");
+      const res = await signIn("credentials", { email, password, redirect: false });
+      if (res?.error) {
+        setError("Invalid email or password");
         return;
       }
-      setDevOtp(data.devOtp ?? null);
-      setOtp("");
-      setStep("otp");
-      setResendIn(RESEND_SECONDS);
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [phone]);
-
-  /** Completes sign-in via the NextAuth `otp` provider (optionally with a name). */
-  const finishLogin = useCallback(
-    async (signupName?: string) => {
-      setLoading(true);
-      try {
-        const res = await signIn("otp", {
-          phone: phone.replace(/\D/g, ""),
-          otp: otp.replace(/\D/g, ""),
-          ...(signupName ? { name: signupName } : {}),
-          redirect: false,
-        });
-        if (res?.error) {
-          setError("Invalid or expired OTP. Please try again.");
-          setStep("otp");
-          return;
-        }
-        const target = redirectRef.current ?? "/dashboard";
-        close();
-        router.push(target);
-        router.refresh();
-      } catch {
-        setError("Something went wrong. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [otp, phone, close, router],
-  );
-
-  const verifyOtp = useCallback(async () => {
-    setError("");
-    if (otp.replace(/\D/g, "").length < 6) {
-      setError("Enter the 6-digit OTP");
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch("/api/otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: phone.replace(/\D/g, ""),
-          otp: otp.replace(/\D/g, ""),
-        }),
-      });
-      const data = await res.json();
-      if (!data.valid) {
-        setError("Invalid or expired OTP. Please try again.");
-        return;
-      }
-      if (data.isNewUser) {
-        // First-time number → collect a name before creating the account.
-        setStep("name");
-        return;
-      }
-      await finishLogin();
+      close();
+      router.push(redirectRef.current ?? "/dashboard");
+      router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [otp, phone, finishLogin]);
+  }, [email, password, close, router]);
 
-  const submitName = useCallback(async () => {
+  const handleRegister = useCallback(async () => {
     setError("");
-    if (name.trim().length < 2) {
-      setError("Please enter your name");
+    setSuccess("");
+    if (!name.trim() || !email || !password) {
+      setError("Please fill in all fields");
       return;
     }
-    await finishLogin(name.trim());
-  }, [name, finishLogin]);
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Registration failed");
+        return;
+      }
+      
+      setSuccess("Account created successfully! Please sign in.");
+      setTab("login");
+      setPassword("");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [name, email, password]);
+
+  const switchTab = useCallback((t: Tab) => {
+    setTab(t);
+    setError("");
+    setSuccess("");
+    setPassword("");
+    setShowPassword(false);
+  }, []);
 
   const ctxValue = useMemo(() => ({ open, close }), [open, close]);
 
@@ -194,28 +147,22 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
       {children}
       <AuthModalView
         isOpen={isOpen}
-        step={step}
-        phone={phone}
-        otp={otp}
+        tab={tab}
         name={name}
+        email={email}
+        password={password}
+        showPassword={showPassword}
         loading={loading}
         error={error}
-        devOtp={devOtp}
-        resendIn={resendIn}
+        success={success}
         onClose={close}
-        onPhoneChange={setPhone}
-        onOtpChange={setOtp}
+        onTabChange={switchTab}
         onNameChange={setName}
-        onRequestOtp={requestOtp}
-        onVerifyOtp={verifyOtp}
-        onSubmitName={submitName}
-        onResend={requestOtp}
-        onBack={() => {
-          setStep("phone");
-          setOtp("");
-          setError("");
-          setResendIn(0);
-        }}
+        onEmailChange={setEmail}
+        onPasswordChange={setPassword}
+        onTogglePassword={() => setShowPassword((v) => !v)}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
       />
     </AuthModalContext.Provider>
   );
@@ -223,59 +170,28 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
 
 function AuthModalView(props: {
   isOpen: boolean;
-  step: Step;
-  phone: string;
-  otp: string;
+  tab: Tab;
   name: string;
+  email: string;
+  password: string;
+  showPassword: boolean;
   loading: boolean;
   error: string;
-  devOtp: string | null;
-  resendIn: number;
+  success: string;
   onClose: () => void;
-  onPhoneChange: (v: string) => void;
-  onOtpChange: (v: string) => void;
+  onTabChange: (t: Tab) => void;
   onNameChange: (v: string) => void;
-  onRequestOtp: () => void;
-  onVerifyOtp: () => void;
-  onSubmitName: () => void;
-  onResend: () => void;
-  onBack: () => void;
+  onEmailChange: (v: string) => void;
+  onPasswordChange: (v: string) => void;
+  onTogglePassword: () => void;
+  onLogin: () => void;
+  onRegister: () => void;
 }) {
   const {
-    isOpen,
-    step,
-    phone,
-    otp,
-    name,
-    loading,
-    error,
-    devOtp,
-    resendIn,
-    onClose,
-    onPhoneChange,
-    onOtpChange,
-    onNameChange,
-    onRequestOtp,
-    onVerifyOtp,
-    onSubmitName,
-    onResend,
-    onBack,
+    isOpen, tab, name, email, password, showPassword, loading, error, success,
+    onClose, onTabChange, onNameChange, onEmailChange, onPasswordChange,
+    onTogglePassword, onLogin, onRegister,
   } = props;
-
-  const headings: Record<Step, { title: string; sub: string }> = {
-    phone: {
-      title: "Login or Register",
-      sub: "Continue with your mobile number",
-    },
-    otp: {
-      title: "Verify OTP",
-      sub: `Enter the 6-digit code sent to +91 ${phone.replace(/\D/g, "")}`,
-    },
-    name: {
-      title: "What's your name?",
-      sub: "Tell us your name to finish creating your account",
-    },
-  };
 
   if (typeof document === "undefined") return null;
 
@@ -288,10 +204,7 @@ function AuthModalView(props: {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <div
-            className="absolute inset-0 bg-ink/50 backdrop-blur-sm"
-            onClick={onClose}
-          />
+          <div className="absolute inset-0 bg-ink/50 backdrop-blur-sm" onClick={onClose} />
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -300,7 +213,7 @@ function AuthModalView(props: {
             className="relative z-10 w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-card"
           >
             {/* Header */}
-            <div className="relative bg-brand-gradient px-6 pb-8 pt-6 text-white">
+            <div className="relative bg-brand-gradient px-6 pb-6 pt-6 text-white">
               <button
                 onClick={onClose}
                 className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-lg text-white/80 transition-colors hover:bg-white/15 hover:text-white"
@@ -311,175 +224,94 @@ function AuthModalView(props: {
               <div className="flex items-center gap-2 [&_*]:!text-white">
                 <Logo />
               </div>
-              <h2 className="mt-5 font-display text-2xl font-bold">
-                {headings[step].title}
+              <h2 className="mt-4 font-display text-2xl font-bold">
+                {tab === "login" ? "Welcome back" : "Create account"}
               </h2>
-              <p className="mt-1 text-sm text-white/85">{headings[step].sub}</p>
+              <p className="mt-1 text-sm text-white/85">
+                {tab === "login"
+                  ? "Sign in to continue learning"
+                  : "Join EngineeringExpert and start learning"}
+              </p>
             </div>
 
-            <div className="space-y-5 px-6 py-6">
+            {/* Tabs */}
+            <div className="flex border-b border-surface-muted">
+              <button
+                onClick={() => onTabChange("login")}
+                className={cn(
+                  "flex-1 py-3 text-sm font-semibold transition-colors",
+                  tab === "login"
+                    ? "border-b-2 border-brand-600 text-brand-700"
+                    : "text-ink-muted hover:text-ink-soft",
+                )}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => onTabChange("register")}
+                className={cn(
+                  "flex-1 py-3 text-sm font-semibold transition-colors",
+                  tab === "register"
+                    ? "border-b-2 border-brand-600 text-brand-700"
+                    : "text-ink-muted hover:text-ink-soft",
+                )}
+              >
+                Register
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-6">
               {error && (
                 <div className="rounded-xl bg-rose-50 px-3 py-2.5 text-sm font-medium text-rose-600">
                   {error}
                 </div>
               )}
 
-              {step === "phone" && (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    onRequestOtp();
-                  }}
-                  className="space-y-4"
-                >
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-semibold text-ink-soft">
-                      Mobile number
-                    </span>
-                    <div className="flex items-center gap-2 rounded-xl border border-surface-muted bg-surface-subtle px-3 transition-colors focus-within:border-brand-300 focus-within:bg-white">
-                      <Phone size={18} className="text-ink-muted" />
-                      <span className="text-sm font-semibold text-ink-soft">+91</span>
-                      <input
-                        autoFocus
-                        inputMode="numeric"
-                        maxLength={10}
-                        placeholder="98765 43210"
-                        value={phone}
-                        onChange={(e) =>
-                          onPhoneChange(e.target.value.replace(/\D/g, "").slice(0, 10))
-                        }
-                        className="h-12 w-full bg-transparent text-base tracking-wide outline-none placeholder:text-ink-muted"
-                      />
-                    </div>
-                  </label>
-                  <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 size={18} className="animate-spin" /> Sending OTP…
-                      </>
-                    ) : (
-                      "Get OTP"
-                    )}
-                  </Button>
-                </form>
+              {success && (
+                <div className="rounded-xl bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-600 border border-emerald-100">
+                  {success}
+                </div>
               )}
 
-              {step === "otp" && (
+              {tab === "login" ? (
                 <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    onVerifyOtp();
-                  }}
+                  onSubmit={(e) => { e.preventDefault(); onLogin(); }}
                   className="space-y-4"
                 >
-                  {devOtp && (
-                    <div className="flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-sm text-brand-700">
-                      <ShieldCheck size={16} />
-                      <span>
-                        Demo OTP: <strong className="tracking-widest">{devOtp}</strong>
-                      </span>
-                    </div>
-                  )}
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-semibold text-ink-soft">
-                      One-time password
-                    </span>
-                    <input
-                      autoFocus
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="● ● ● ● ● ●"
-                      value={otp}
-                      onChange={(e) =>
-                        onOtpChange(e.target.value.replace(/\D/g, "").slice(0, 6))
-                      }
-                      className={cn(
-                        "h-14 w-full rounded-xl border border-surface-muted bg-surface-subtle px-4 text-center text-2xl font-bold tracking-[0.5em] outline-none transition-colors",
-                        "focus:border-brand-300 focus:bg-white",
-                      )}
-                    />
-                  </label>
-
-                  {/* Resend timer (30s) */}
-                  <div className="flex items-center justify-center text-sm text-ink-muted">
-                    {resendIn > 0 ? (
-                      <span>
-                        Resend OTP in{" "}
-                        <span className="font-semibold tabular-nums text-ink-soft">
-                          0:{String(resendIn).padStart(2, "0")}
-                        </span>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={onResend}
-                        disabled={loading}
-                        className="font-semibold text-brand-700 transition-colors hover:text-brand-800 disabled:opacity-50"
-                      >
-                        Resend OTP
-                      </button>
-                    )}
-                  </div>
-
+                  <EmailInput value={email} onChange={onEmailChange} />
+                  <PasswordInput
+                    value={password}
+                    onChange={onPasswordChange}
+                    show={showPassword}
+                    onToggle={onTogglePassword}
+                    placeholder="Your password"
+                  />
                   <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 size={18} className="animate-spin" /> Verifying…
-                      </>
-                    ) : (
-                      "Verify & Continue"
-                    )}
+                    {loading ? <><Loader2 size={18} className="animate-spin" /> Signing in…</> : "Sign In"}
                   </Button>
-                  <button
-                    type="button"
-                    onClick={onBack}
-                    className="mx-auto flex items-center gap-1 text-sm font-medium text-ink-muted transition-colors hover:text-brand-700"
-                  >
-                    <ArrowLeft size={14} /> Change number
-                  </button>
                 </form>
-              )}
-
-              {step === "name" && (
+              ) : (
                 <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    onSubmitName();
-                  }}
+                  onSubmit={(e) => { e.preventDefault(); onRegister(); }}
                   className="space-y-4"
                 >
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-semibold text-ink-soft">
-                      Full name
-                    </span>
-                    <div className="flex items-center gap-2 rounded-xl border border-surface-muted bg-surface-subtle px-3 transition-colors focus-within:border-brand-300 focus-within:bg-white">
-                      <User size={18} className="text-ink-muted" />
-                      <input
-                        autoFocus
-                        type="text"
-                        maxLength={60}
-                        placeholder="e.g. Aditya Kumar"
-                        value={name}
-                        onChange={(e) => onNameChange(e.target.value)}
-                        className="h-12 w-full bg-transparent text-base outline-none placeholder:text-ink-muted"
-                      />
-                    </div>
-                  </label>
+                  <NameInput value={name} onChange={onNameChange} />
+                  <EmailInput value={email} onChange={onEmailChange} />
+                  <PasswordInput
+                    value={password}
+                    onChange={onPasswordChange}
+                    show={showPassword}
+                    onToggle={onTogglePassword}
+                    placeholder="Min. 6 characters"
+                  />
                   <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 size={18} className="animate-spin" /> Creating account…
-                      </>
-                    ) : (
-                      "Create account"
-                    )}
+                    {loading ? <><Loader2 size={18} className="animate-spin" /> Creating account…</> : "Create Account"}
                   </Button>
                 </form>
               )}
 
               <p className="text-center text-xs leading-relaxed text-ink-muted">
-                By continuing you agree to EngineeringExpert&apos;s Terms of Service
-                &amp; Privacy Policy.
+                By continuing you agree to EngineeringExpert&apos;s Terms of Service &amp; Privacy Policy.
               </p>
             </div>
           </motion.div>
@@ -487,5 +319,83 @@ function AuthModalView(props: {
       )}
     </AnimatePresence>,
     document.body,
+  );
+}
+
+function EmailInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-semibold text-ink-soft">Email address</span>
+      <div className="flex items-center gap-2 rounded-xl border border-surface-muted bg-surface-subtle px-3 transition-colors focus-within:border-brand-300 focus-within:bg-white">
+        <Mail size={18} className="shrink-0 text-ink-muted" />
+        <input
+          type="email"
+          autoComplete="email"
+          placeholder=""
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-12 w-full bg-transparent text-base outline-none placeholder:text-ink-muted"
+        />
+      </div>
+    </label>
+  );
+}
+
+function NameInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-semibold text-ink-soft">Full name</span>
+      <div className="flex items-center gap-2 rounded-xl border border-surface-muted bg-surface-subtle px-3 transition-colors focus-within:border-brand-300 focus-within:bg-white">
+        <User size={18} className="shrink-0 text-ink-muted" />
+        <input
+          type="text"
+          autoComplete="name"
+          placeholder=""
+          maxLength={60}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-12 w-full bg-transparent text-base outline-none placeholder:text-ink-muted"
+        />
+      </div>
+    </label>
+  );
+}
+
+function PasswordInput({
+  value,
+  onChange,
+  show,
+  onToggle,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  show: boolean;
+  onToggle: () => void;
+  placeholder: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-semibold text-ink-soft">Password</span>
+      <div className="flex items-center gap-2 rounded-xl border border-surface-muted bg-surface-subtle px-3 transition-colors focus-within:border-brand-300 focus-within:bg-white">
+        <Lock size={18} className="shrink-0 text-ink-muted" />
+        <input
+          type={show ? "text" : "password"}
+          autoComplete="current-password"
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-12 w-full bg-transparent text-base outline-none placeholder:text-ink-muted"
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="shrink-0 text-ink-muted hover:text-ink-soft"
+          tabIndex={-1}
+        >
+          {show ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+    </label>
   );
 }

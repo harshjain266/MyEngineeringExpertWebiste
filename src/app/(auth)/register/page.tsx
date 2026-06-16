@@ -48,63 +48,72 @@ export default function RegisterPage() {
             Join EngineeringExpert and start learning
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-5" onSubmit={handleSubmit} autoComplete="off">
           {error && (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-500">
               {error}
             </div>
           )}
-          <div className="space-y-4 rounded-md shadow-sm">
+          <div className="space-y-4">
             <div>
-              <label htmlFor="full-name" className="sr-only">Full Name</label>
+              <label htmlFor="reg-name" className="mb-1 block text-sm font-medium text-slate-700">
+                Full Name
+              </label>
               <input
-                id="full-name"
-                name="name"
+                id="reg-name"
+                name="user-full-name"
                 type="text"
                 required
-                className="relative block w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-                placeholder="Full Name"
+                autoComplete="off"
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
+
             <div>
-              <label htmlFor="email-address" className="sr-only">Email address</label>
+              <label htmlFor="reg-email" className="mb-1 block text-sm font-medium text-slate-700">
+                Email address
+              </label>
               <input
-                id="email-address"
-                name="email"
+                id="reg-email"
+                name="user-email"
                 type="email"
                 required
-                className="relative block w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-                placeholder="Email address"
+                autoComplete="off"
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
+
             <div>
-              <label htmlFor="password" className="sr-only">Password</label>
+              <label htmlFor="reg-password" className="mb-1 block text-sm font-medium text-slate-700">
+                Password
+              </label>
               <input
-                id="password"
-                name="password"
+                id="reg-password"
+                name="user-new-password"
                 type="password"
                 required
-                className="relative block w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-                placeholder="Password"
+                autoComplete="new-password"
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                placeholder="Create a password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
           </div>
 
-          <div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading}
-            >
-              {loading ? "Creating account..." : "Register"}
-            </Button>
-          </div>
+          <Button
+            type="submit"
+            className="w-full py-6 text-lg"
+            disabled={loading}
+          >
+            {loading ? "Creating account..." : "Register"}
+          </Button>
 
           <div className="text-center text-sm">
             <span className="text-slate-600">Already have an account? </span>

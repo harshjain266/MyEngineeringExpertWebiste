@@ -39,6 +39,7 @@ export interface Course {
   tags: string[];
   plannerUrl?: string;
   popular?: boolean;
+  enrollmentCount?: number;
 }
 
 export interface EnrolledCourse {
@@ -51,10 +52,13 @@ export interface LiveClass {
   id: string;
   title: string;
   topic: string;
+  subject?: string | null;
+  meetingUrl?: string | null;
   instructor: Instructor;
   startsAt: string; // ISO
   endsAt: string; // ISO
   status: "Upcoming" | "Live" | "Ongoing" | "Completed";
+  courseId?: string | null;
 }
 
 export interface Announcement {

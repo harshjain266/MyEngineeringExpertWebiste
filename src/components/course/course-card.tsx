@@ -3,9 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Clock, Signal } from "lucide-react";
+import { Clock, Users } from "lucide-react";
 import type { Course } from "@/types";
-import { Stars } from "@/components/ui/stars";
 import { Button } from "@/components/ui/button";
 import { BuyNowButton } from "./buy-now-button";
 import { formatINR } from "@/lib/utils";
@@ -18,7 +17,8 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.5, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -6 }}
-      className="group flex h-full flex-col overflow-hidden rounded-none border border-surface-muted bg-white shadow-soft transition-shadow hover:shadow-card"
+      whileTap={{ scale: 0.98 }}
+      className="group flex h-full flex-col overflow-hidden rounded-none border border-surface-muted bg-white shadow-soft transition-all duration-300 hover:border-brand-500 hover:shadow-glow active:border-brand-600"
     >
       <Link href={`/courses/${course.slug}`} className="relative block aspect-[16/10] overflow-hidden">
         <Image
@@ -34,7 +34,6 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
       <div className="flex flex-1 flex-col gap-2.5 p-3.5">
         <div className="flex items-center justify-between text-[10px] font-medium text-ink-muted/80">
           <span className="rounded-sm bg-brand-50 px-2 py-0.5 text-brand-700">{course.category}</span>
-          <span className="flex items-center gap-1"><Signal size={11} /> {course.level}</span>
         </div>
 
         <Link href={`/courses/${course.slug}`}>
@@ -54,7 +53,12 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
           <span className="text-[11px] text-ink-soft">{course.instructor.name}</span>
         </div>
 
-        <Stars rating={course.rating} count={course.ratingCount} />
+        <div className="flex items-center gap-1.5 text-[11px] font-medium text-ink-muted">
+          <span className="flex items-center gap-1 rounded-full bg-surface-subtle px-2 py-0.5">
+            <Users size={12} className="text-brand-600" />
+            {course.enrollmentCount?.toLocaleString() || "1,240"} students
+          </span>
+        </div>
 
         <div className="mt-auto flex items-center justify-between border-t border-surface-muted/60 pt-2.5">
           <div className="flex items-center gap-1 text-[10px] text-ink-muted/60">

@@ -23,6 +23,21 @@ function formatDate(iso: string) {
 }
 
 export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
+  if (!liveClasses || liveClasses.length === 0) {
+    return (
+      <div className="rounded-none border border-surface-muted bg-white p-4">
+        <SectionHeader title="Live Classes" viewAllHref="/dashboard/live-classes" />
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="grid h-12 w-12 place-items-center rounded-full bg-surface-subtle text-ink-muted">
+            <Video size={24} />
+          </div>
+          <p className="mt-3 text-sm font-medium text-ink">No live classes scheduled</p>
+          <p className="text-xs text-ink-muted">Check back later for updates</p>
+        </div>
+      </div>
+    );
+  }
+
   const featured = liveClasses.find((c) => c.status === "Live") ?? liveClasses[0];
   const rest = liveClasses.filter((c) => c.id !== featured.id).slice(0, 3);
 
@@ -38,7 +53,7 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
       >
         <div className="flex items-start gap-3">
           <Image
-            src={featured.instructor.avatar}
+            src={featured.instructor.avatar || "https://i.pravatar.cc/120?img=1"}
             alt={featured.instructor.name}
             width={48}
             height={48}
@@ -57,6 +72,11 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
             <h3 className="mt-1.5 truncate font-display text-sm font-bold text-ink">
               {featured.title}
             </h3>
+            {featured.subject && (
+              <p className="truncate text-[10px] font-bold uppercase tracking-wider text-brand-600">
+                {featured.subject}
+              </p>
+            )}
             <p className="truncate text-xs text-ink-muted">{featured.topic}</p>
           </div>
         </div>
@@ -72,15 +92,16 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
             size="sm"
             className="flex-1 rounded-none"
             onClick={() => {
-              if (featured.status === "Live") {
-                window.open("https://meet.google.com/vio-bfcr-toq", "_blank");
+              if (featured.meetingUrl) {
+                window.open(featured.meetingUrl, "_blank");
               }
             }}
+            disabled={!featured.meetingUrl && featured.status === "Live"}
           >
-            {featured.status === "Live" ? "Join Now" : "Set Reminder"}
+            {featured.status === "Live" ? "Join Now" : "Upcoming"}
           </Button>
           <Button variant="secondary" size="sm" className="flex-1 rounded-none">
-            <Video size={15} /> Teams
+            <Video size={15} /> Details
           </Button>
         </div>
       </motion.div>
@@ -88,16 +109,25 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
       <ul className="mt-4 space-y-2.5">
         {rest.map((c) => (
           <li key={c.id} className="flex items-center gap-3">
-            <Image src={c.instructor.avatar} alt={c.instructor.name} width={36} height={36} className="rounded-none" />
+            <Image 
+              src={c.instructor.avatar || "https://i.pravatar.cc/120?img=1"} 
+              alt={c.instructor.name} 
+              width={36} 
+              height={36} 
+              className="rounded-none" 
+            />
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium text-ink">{c.title}</div>
-              <div className="truncate text-xs text-ink-muted">{formatDate(c.startsAt)} · {formatTime(c.startsAt)}</div>
+              <div className="truncate text-[10px] text-ink-muted">{c.subject ? `${c.subject} · ` : ""}{formatDate(c.startsAt)} · {formatTime(c.startsAt)}</div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               className="px-3 rounded-none"
-              onClick={() => window.open("https://meet.google.com/vio-bfcr-toq", "_blank")}
+              onClick={() => {
+                if (c.meetingUrl) window.open(c.meetingUrl, "_blank");
+              }}
+              disabled={!c.meetingUrl}
             >
               Join
             </Button>

@@ -8,7 +8,7 @@ datasource db {
 }
 
 model User {
-  id          String           @id @default(cuid())
+  id          String           @id @default(uuid())
   name        String           @default("Student")
   email       String?          @unique
   avatar      String?
@@ -25,7 +25,7 @@ model User {
 }
 
 model Instructor {
-  id          String      @id @default(cuid())
+  id          String      @id @default(uuid())
   name        String
   title       String
   avatar      String?
@@ -36,7 +36,7 @@ model Instructor {
 }
 
 model Course {
-  id            String       @id @default(cuid())
+  id            String       @id @default(uuid())
   slug          String       @unique
   title         String
   category      String
@@ -60,13 +60,14 @@ model Course {
   enrollments   Enrollment[]
   lessons       Lesson[]
   wishlist      Wishlist[]
+  liveClasses   LiveClass[]
 
   @@index([category, level])
   @@index([program])
 }
 
 model Lesson {
-  id       String           @id @default(cuid())
+  id       String           @id @default(uuid())
   title    String
   order    Int
   courseId String
@@ -75,7 +76,7 @@ model Lesson {
 }
 
 model Enrollment {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
   progress     Int      @default(0)
   lastAccessed DateTime @default(now())
   userId       String
@@ -87,7 +88,7 @@ model Enrollment {
 }
 
 model LessonProgress {
-  id          String    @id @default(cuid())
+  id          String    @id @default(uuid())
   completed   Boolean   @default(false)
   completedAt DateTime?
   userId      String
@@ -99,18 +100,22 @@ model LessonProgress {
 }
 
 model LiveClass {
-  id           String     @id @default(cuid())
+  id           String     @id @default(uuid())
   title        String
   topic        String
+  subject      String?
+  meetingUrl   String?
   startsAt     DateTime
   endsAt       DateTime
   status       LiveStatus @default(Upcoming)
   instructorId String
+  courseId     String?
   instructor   Instructor @relation(fields: [instructorId], references: [id])
+  course       Course?    @relation(fields: [courseId], references: [id])
 }
 
 model Wishlist {
-  id       String @id @default(cuid())
+  id       String @id @default(uuid())
   userId   String
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -120,7 +125,7 @@ model Wishlist {
 }
 
 model Order {
-  id                String      @id @default(cuid())
+  id                String      @id @default(uuid())
   amount            Int
   status            OrderStatus @default(Pending)
   course            String
@@ -134,7 +139,7 @@ model Order {
 }
 
 model Otp {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   phone     String
   code      String
   expiresAt DateTime
@@ -144,7 +149,7 @@ model Otp {
 }
 
 model Announcement {
-  id    String   @id @default(cuid())
+  id    String   @id @default(uuid())
   title String
   body  String
   tone  String   @default("info")

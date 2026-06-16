@@ -1,0 +1,68 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+async function main() {
+  const courses = await prisma.course.findMany({ take: 3 });
+  const instructors = await prisma.instructor.findMany({ take: 1 });
+
+  if (courses.length === 0 || instructors.length === 0) {
+    console.log('Need at least one course and one instructor in the DB to seed.');
+    return;
+  }
+
+  const now = new Date();
+  const classes = [];
+
+  for (const course of courses) {
+    // Session 1: Today
+    classes.push({
+      title: `${course.title} - Session 1`,
+      topic: 'Core Concepts and Overview',
+      subject: 'Phase 1: Foundations',
+      meetingUrl: 'https://meet.google.com/abc-defg-hij',
+      startsAt: new Date(now.getTime() + 1000 * 60 * 60 * 2), // in 2 hours
+      endsAt: new Date(now.getTime() + 1000 * 60 * 60 * 4),   // in 4 hours
+      status: 'Upcoming',
+      instructorId: instructors[0].id,
+      courseId: course.id
+    });
+
+    // Session 2: Tomorrow
+    classes.push({
+      title: `${course.title} - Session 2`,
+      topic: 'Deep Dive into Subject Matter',
+      subject: 'Phase 1: Foundations',
+      meetingUrl: 'https://meet.google.com/xyz-qprs-tuv',
+      startsAt: new Date(now.getTime() + 1000 * 60 * 60 * 24 + 1000 * 60 * 60 * 3), // Tomorrow in 3 hours
+      endsAt: new Date(now.getTime() + 1000 * 60 * 60 * 24 + 1000 * 60 * 60 * 5),
+      status: 'Upcoming',
+      instructorId: instructors[0].id,
+      courseId: course.id
+    });
+
+    // Session 3: Day after tomorrow (Different Subject)
+    classes.push({
+      title: `${course.title} - Advanced Workshop`,
+      topic: 'Real-world Project Implementation',
+      subject: 'Phase 2: Practical Application',
+      meetingUrl: 'https://meet.google.com/mno-pjkl-xyz',
+      startsAt: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 2 + 1000 * 60 * 60 * 4),
+      endsAt: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 2 + 1000 * 60 * 60 * 6),
+      status: 'Upcoming',
+      instructorId: instructors[0].id,
+      courseId: course.id
+    });
+  }
+
+  await prisma.liveClass.createMany({ data: classes });
+  console.log(`✅ Successfully seeded ${classes.length} live classes across ${courses.length} courses.`);
+}
+
+main()
+  .catch(e => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

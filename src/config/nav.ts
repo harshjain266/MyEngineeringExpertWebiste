@@ -1,5 +1,4 @@
 import {
-  Award,
   BookMarked,
   BookOpen,
   Bell,
@@ -9,7 +8,7 @@ import {
   Radio,
   Settings,
   ShoppingBag,
-  Star,
+  Info,
 } from "lucide-react";
 
 export interface NavItem {
@@ -24,9 +23,8 @@ export const SIDEBAR_NAV: NavItem[] = [
   { label: "My Courses", href: "/dashboard/my-courses", icon: BookOpen },
   { label: "Live Classes", href: "/dashboard/live-classes", icon: Radio },
   { label: "All Courses", href: "/dashboard/browse", icon: BookMarked },
-  { label: "Wishlist", href: "/dashboard/wishlist", icon: Star },
+  { label: "About Us", href: "/dashboard/about", icon: Info },
   { label: "My Orders", href: "/dashboard/orders", icon: ShoppingBag },
-  { label: "My Certificates", href: "/dashboard/certificates", icon: Award },
   { label: "Notifications", href: "/dashboard/notifications", icon: Bell, badge: 3 },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
   { label: "Help & Support", href: "/dashboard/help", icon: HelpCircle },

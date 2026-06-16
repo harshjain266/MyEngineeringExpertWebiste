@@ -66,17 +66,9 @@ export default async function MyCoursesPage() {
                 </h3>
                 <p className="mt-1 text-sm text-ink-muted">{item.course.instructor.name}</p>
 
-                <div className="mt-6 space-y-2">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-ink-soft">Progress</span>
-                    <span className="text-brand-700">{item.progress}%</span>
-                  </div>
-                  <ProgressBar value={item.progress} className="h-2 rounded-none" />
-                </div>
-
                 <div className="mt-auto pt-6">
-                  <Link href={`/courses/${item.course.slug}`}>
-                    <Button className="w-full rounded-none">Resume Learning</Button>
+                  <Link href={`/dashboard/my-courses/${item.course.slug}`}>
+                    <Button className="w-full rounded-none">Live Class</Button>
                   </Link>
                 </div>
               </div>

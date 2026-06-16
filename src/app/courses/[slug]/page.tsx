@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/landing/site-header";
 import { Footer } from "@/components/landing/footer";
 import { CourseDetailView } from "@/components/course/course-detail-view";
-import { getCourseBySlug } from "@/lib/data";
+import { getCourseBySlug, isEnrolled } from "@/lib/data";
 import { buildCourseDetail } from "@/lib/course-detail";
 
 interface Params {
@@ -23,12 +23,15 @@ export default async function CourseDetailPage({ params }: Params) {
   const course = await getCourseBySlug(slug);
   if (!course) notFound();
 
-  const detail = buildCourseDetail(course);
+  const [detail, isPurchased] = await Promise.all([
+    buildCourseDetail(course),
+    isEnrolled(course.id),
+  ]);
 
   return (
-    <main className="overflow-x-hidden">
+    <main>
       <SiteHeader />
-      <CourseDetailView course={course} detail={detail} />
+      <CourseDetailView course={course} detail={detail} isPurchased={isPurchased} />
       <Footer />
     </main>
   );

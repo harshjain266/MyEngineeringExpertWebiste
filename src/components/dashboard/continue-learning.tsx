@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { PlayCircle } from "lucide-react";
 import type { EnrolledCourse } from "@/types";
@@ -37,16 +38,20 @@ export function ContinueLearning({ items }: { items: EnrolledCourse[] }) {
             </h3>
             <p className="text-xs text-ink-muted">{item.course.instructor.name}</p>
             <div className="mt-auto">
-              <Button size="sm" variant="subtle" className="h-7 px-3 text-[10px] rounded-none">Resume Course</Button>
+              <Link href={`/dashboard/my-courses/${item.course.slug}`}>
+                <Button size="sm" variant="subtle" className="h-7 px-3 text-[10px] rounded-none">Resume Course</Button>
+              </Link>
             </div>
           </div>
         </motion.div>
       ))}
 
       <div className="sm:col-span-2">
-        <Button variant="subtle" size="sm" className="w-full">
-          View all my courses
-        </Button>
+        <Link href="/dashboard/my-courses">
+          <Button variant="subtle" size="sm" className="w-full">
+            View all my courses
+          </Button>
+        </Link>
       </div>
     </div>
   );

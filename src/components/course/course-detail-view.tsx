@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import {
@@ -16,28 +16,89 @@ import {
 } from "lucide-react";
 import type { Course, CourseDetail } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { Stars } from "@/components/ui/stars";
+import { Button } from "@/components/ui/button";
 import { BuyNowButton } from "@/components/course/buy-now-button";
 import { formatINR } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  "Features",
-  "About",
-  "Schedule",
-  "Teachers",
-  "More Details",
+  { id: "features", label: "Features" },
+  { id: "about", label: "About" },
+  { id: "schedule", label: "Schedule" },
+  { id: "teachers", label: "Teachers" },
+  { id: "more-details", label: "More Details" },
 ] as const;
-type Tab = (typeof TABS)[number];
+
+type TabId = (typeof TABS)[number]["id"];
 
 export function CourseDetailView({
   course,
   detail,
+  isPurchased = false,
 }: {
   course: Course;
   detail: CourseDetail;
+  isPurchased?: boolean;
 }) {
-  const [tab, setTab] = useState<Tab>("Features");
+  const filteredTabs = TABS.filter((tab) => !isPurchased || tab.id !== "features");
+  const [activeTab, setActiveTab] = useState<TabId>(isPurchased ? "about" : "features");
+  const isManualScrolling = useRef(false);
+
+  const tabsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isManualScrolling.current) return;
+
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveTab(entry.target.id as TabId);
+          }
+        });
+      },
+      {
+        rootMargin: "-150px 0px -70% 0px",
+      }
+    );
+
+    filteredTabs.forEach((tab) => {
+      const element = document.getElementById(tab.id);
+      if (element) observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, [filteredTabs]);
+
+  useEffect(() => {
+    // Scroll the tab into view horizontally if it's the active one
+    const activeTabElement = tabsRef.current?.querySelector(`[data-tab-id="${activeTab}"]`);
+    if (activeTabElement) {
+      activeTabElement.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    }
+  }, [activeTab]);
+
+  const scrollToSection = (id: TabId) => {
+    const element = document.getElementById(id);
+    if (element) {
+      isManualScrolling.current = true;
+      setActiveTab(id);
+      
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+
+      // Reset manual scrolling flag after animation finishes
+      setTimeout(() => {
+        isManualScrolling.current = false;
+      }, 800);
+    }
+  };
 
   return (
     <div className="bg-surface-subtle pb-16 pt-20">
@@ -58,43 +119,61 @@ export function CourseDetailView({
             <span className="flex items-center gap-1">
               <CalendarDays size={14} /> Starts {detail.startsOn}
             </span>
-            <Stars rating={course.rating} count={course.ratingCount} />
+            <span className="flex items-center gap-1">
+              <Users size={14} className="text-brand-600" /> {course.enrollmentCount?.toLocaleString() || "1,240"} students enrolled
+            </span>
           </div>
         </div>
+      </div>
 
-        {/* Sticky tab bar */}
-        <div className="sticky top-16 z-30 border-t border-surface-muted bg-white/95 backdrop-blur">
-          <div className="container-px flex gap-1 overflow-x-auto">
-            {TABS.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={cn(
-                  "relative whitespace-nowrap px-4 py-3.5 text-sm font-semibold transition-colors",
-                  tab === t ? "text-brand-700" : "text-ink-muted hover:text-ink-soft",
-                )}
-              >
-                {t}
-                {tab === t && (
-                  <motion.span
-                    layoutId="tab-underline"
-                    className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-brand-600"
-                  />
-                )}
-              </button>
-            ))}
-          </div>
+      {/* Sticky tab bar - Moved outside to stick over the body */}
+      <div className="sticky top-16 z-40 border-b border-surface-muted bg-white/95 backdrop-blur shadow-sm">
+        <div 
+          ref={tabsRef}
+          className="container-px flex gap-1 overflow-x-auto no-scrollbar scroll-smooth"
+        >
+          {filteredTabs.map((t) => (
+            <button
+              key={t.id}
+              data-tab-id={t.id}
+              onClick={() => scrollToSection(t.id)}
+              className={cn(
+                "relative whitespace-nowrap px-4 py-3.5 text-sm font-semibold transition-colors",
+                activeTab === t.id ? "text-brand-700" : "text-ink-muted hover:text-ink-soft",
+              )}
+            >
+              {t.label}
+              {activeTab === t.id && (
+                <motion.span
+                  layoutId="tab-underline"
+                  className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-brand-600"
+                />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Body */}
       <div className="container-px mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="min-w-0">
-          {tab === "Features" && <FeaturesPanel course={course} detail={detail} />}
-          {tab === "About" && <AboutPanel detail={detail} />}
-          {tab === "Schedule" && <SchedulePanel detail={detail} />}
-          {tab === "Teachers" && <TeachersPanel detail={detail} />}
-          {tab === "More Details" && <MoreDetailsPanel detail={detail} />}
+        <div className="min-w-0 space-y-10">
+          {!isPurchased && (
+            <section id="features" className="scroll-mt-32">
+              <FeaturesPanel course={course} detail={detail} />
+            </section>
+          )}
+          <section id="about" className="scroll-mt-32">
+            <AboutPanel detail={detail} />
+          </section>
+          <section id="schedule" className="scroll-mt-32">
+            <SchedulePanel detail={detail} />
+          </section>
+          <section id="teachers" className="scroll-mt-32">
+            <TeachersPanel detail={detail} />
+          </section>
+          <section id="more-details" className="scroll-mt-32">
+            <MoreDetailsPanel detail={detail} />
+          </section>
         </div>
 
         {/* Sticky purchase card */}
@@ -120,18 +199,29 @@ export function CourseDetailView({
               <p className="flex items-center gap-1.5 text-sm text-ink-muted">
                 <CalendarDays size={14} /> {detail.startsOn} – {detail.endsOn}
               </p>
-              <div className="flex items-baseline gap-2 border-t border-surface-muted pt-3">
-                <span className="font-display text-2xl font-bold text-brand-700">
-                  {formatINR(course.price)}
-                </span>
-              </div>
-              <BuyNowButton
-                size="lg"
-                className="w-full"
-                course={{ courseId: course.id, courseTitle: course.title, amount: course.price, planName: "Batch" }}
-              >
-                Continue with Batch
-              </BuyNowButton>
+              {!isPurchased && (
+                <>
+                  <div className="flex items-baseline gap-2 border-t border-surface-muted pt-3">
+                    <span className="font-display text-2xl font-bold text-brand-700">
+                      {formatINR(course.price)}
+                    </span>
+                  </div>
+                  <BuyNowButton
+                    size="lg"
+                    className="w-full"
+                    course={{ courseId: course.id, courseTitle: course.title, amount: course.price, planName: "Batch" }}
+                  >
+                    Continue with Batch
+                  </BuyNowButton>
+                </>
+              )}
+              {isPurchased && (
+                <div className="border-t border-surface-muted pt-3">
+                  <Button className="w-full" variant="outline" disabled>
+                    Already Enrolled
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </aside>

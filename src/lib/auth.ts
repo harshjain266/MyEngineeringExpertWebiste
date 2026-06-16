@@ -50,69 +50,6 @@ export const authOptions: NextAuthOptions = {
       },
     }),
 
-    // ── Mobile number + OTP (PW-style) ───────────────────────────────────
-    CredentialsProvider({
-      id: "otp",
-      name: "OTP",
-      credentials: {
-        phone: { label: "Phone", type: "text" },
-        otp: { label: "OTP", type: "text" },
-        name: { label: "Name", type: "text" },
-      },
-      async authorize(credentials) {
-        const phone = credentials?.phone?.trim();
-        const otp = credentials?.otp?.trim();
-        const name = credentials?.name?.trim();
-        if (!phone || !otp) throw new Error("Phone and OTP are required");
-
-        const record = await prisma.otp.findFirst({
-          where: { phone, code: otp, expiresAt: { gt: new Date() } },
-          orderBy: { createdAt: "desc" },
-        });
-        if (!record) throw new Error("Invalid or expired OTP");
-
-        // Consume all OTPs for this number once verified.
-        await prisma.otp.deleteMany({ where: { phone } });
-
-        // Find-or-create the user keyed by phone number.
-        let user = await prisma.user.findUnique({ where: { phone } });
-        if (!user) {
-          user = await prisma.user.create({
-            data: {
-              phone,
-              name: name && name.length > 0 ? name : "Student",
-              avatar: DEFAULT_AVATAR(phone),
-              role: "student",
-            },
-          });
-
-          // Auto-enroll new users in default courses for demo purposes
-          const defaultSlugs = ["data-structures-using-cpp", "database-management-systems", "operating-systems"];
-          const coursesToEnroll = await prisma.course.findMany({
-            where: { slug: { in: defaultSlugs } },
-          });
-
-          if (coursesToEnroll.length > 0) {
-            await prisma.enrollment.createMany({
-              data: coursesToEnroll.map((c) => ({
-                userId: user!.id,
-                courseId: c.id,
-                progress: 0,
-              })),
-            });
-          }
-        }
-
-        return {
-          id: user.id,
-          email: user.email ?? undefined,
-          name: user.name,
-          role: user.role,
-          avatar: user.avatar ?? DEFAULT_AVATAR(phone),
-          phone: user.phone ?? phone,
-        } as any;
-      },
-    }),
   ],
   callbacks: {
     async jwt({ token, user }) {
@@ -121,7 +58,6 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.name = user.name ?? "Student";
         token.picture = (user as any).avatar ?? null;
-        (token as any).phone = (user as any).phone ?? null;
       }
       return token;
     },
@@ -131,7 +67,6 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).role = token.role;
         (session.user as any).avatar =
           token.picture ?? DEFAULT_AVATAR(String(token.id ?? "user"));
-        (session.user as any).phone = (token as any).phone ?? undefined;
         session.user.name = (token.name as string) ?? "Student";
       }
       return session;

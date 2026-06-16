@@ -86,14 +86,16 @@ export function BuyNowButton({
     setError("");
 
     try {
+      /* COMMENTED OUT RAZORPAY FRONTEND FOR TESTING
       // 1. Load Razorpay script
       const loaded = await loadRazorpayScript();
       if (!loaded) {
         setError("Could not load payment gateway. Check your connection.");
         return;
       }
+      */
 
-      // 2. Create order on server
+      // 2. Create order on server (Now handles dummy success)
       const res = await fetch("/api/payment/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -110,6 +112,14 @@ export function BuyNowButton({
         return;
       }
 
+      // 3. Handle Dummy Success
+      if (data.dummySuccess) {
+        router.push("/dashboard/my-courses");
+        router.refresh();
+        return;
+      }
+
+      /* COMMENTED OUT RAZORPAY FRONTEND FOR TESTING
       // 3. Open Razorpay checkout
       const rzp = new window.Razorpay({
         key: data.keyId,
@@ -148,6 +158,7 @@ export function BuyNowButton({
       });
 
       rzp.open();
+      */
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
