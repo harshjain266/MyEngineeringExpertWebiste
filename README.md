@@ -5,6 +5,13 @@ Next.js full-stack app inspired by PW. This iteration ships a **PW-style marketi
 landing page** and the **student Dashboard**, built UI-first on a typed mock data
 layer with the real Postgres/Redis seams already wired.
 
+
+
+
+ DATABASE_URL="postgresql://postgres@localhost:5432/Student_Management_App"
+
+ 
+
 ## Stack
 
 | Layer      | Choice                                              |

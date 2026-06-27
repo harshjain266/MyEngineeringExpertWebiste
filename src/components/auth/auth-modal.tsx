@@ -9,8 +9,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, EyeOff, Loader2, Lock, Mail, User, X } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
@@ -38,7 +37,6 @@ export function useAuthModal() {
 type Tab = "login" | "register";
 
 export function AuthModalProvider({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("login");
   const [name, setName] = useState("");
@@ -89,15 +87,17 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
         setError("Invalid email or password");
         return;
       }
+      const session = await getSession();
+      const target =
+        redirectRef.current ?? portalHrefForRole((session?.user as any)?.role);
       close();
-      router.push(redirectRef.current ?? portalHrefForRole((res as any)?.role));
-      router.refresh();
+      window.location.assign(target);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [email, password, close, router]);
+  }, [email, password, close]);
 
   const handleRegister = useCallback(async () => {
     setError("");
