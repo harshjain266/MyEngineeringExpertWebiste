@@ -16,6 +16,7 @@ import { Eye, EyeOff, Loader2, Lock, Mail, User, X } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { portalHrefForRole } from "@/lib/role-routes";
 
 interface OpenOptions {
   redirectTo?: string;
@@ -89,7 +90,7 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       close();
-      router.push(redirectRef.current ?? "/dashboard");
+      router.push(redirectRef.current ?? portalHrefForRole((res as any)?.role));
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");

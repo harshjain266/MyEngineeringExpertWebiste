@@ -64,7 +64,12 @@ export default async function MyCoursesPage() {
                 <h3 className="line-clamp-2 font-display text-lg font-bold leading-tight text-ink">
                   {item.course.title}
                 </h3>
-                <p className="mt-1 text-sm text-ink-muted">{item.course.instructor.name}</p>
+                <Link
+                  href={`/teachers/${item.course.instructor.id}`}
+                  className="mt-1 inline-flex text-sm font-medium text-ink-muted transition-colors hover:text-brand-700"
+                >
+                  {item.course.instructor.name}
+                </Link>
 
                 <div className="mt-auto pt-6">
                   <Link href={`/dashboard/my-courses/${item.course.slug}`}>

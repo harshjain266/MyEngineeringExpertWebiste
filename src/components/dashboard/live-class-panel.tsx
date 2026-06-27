@@ -38,8 +38,12 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
     );
   }
 
-  const featured = liveClasses.find((c) => c.status === "Live") ?? liveClasses[0];
+  const isJoinable = (item: LiveClass) =>
+    (item.status === "Live" || item.status === "Ongoing") && Boolean(item.meetingUrl);
+
+  const featured = liveClasses.find((c) => isJoinable(c)) ?? liveClasses[0];
   const rest = liveClasses.filter((c) => c.id !== featured.id).slice(0, 3);
+  const featuredJoinable = isJoinable(featured);
 
   return (
     <div className="rounded-none border border-surface-muted bg-white p-4">
@@ -61,12 +65,12 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              {featured.status === "Live" ? (
+              {featuredJoinable ? (
                 <Badge variant="live" className="gap-1 rounded-none">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> LIVE
                 </Badge>
               ) : (
-                <Badge variant="warning" className="rounded-none">Upcoming</Badge>
+                <Badge variant="warning" className="rounded-none">Waiting for teacher</Badge>
               )}
             </div>
             <h3 className="mt-1.5 truncate font-display text-sm font-bold text-ink">
@@ -92,13 +96,13 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
             size="sm"
             className="flex-1 rounded-none"
             onClick={() => {
-              if (featured.meetingUrl) {
+              if (featuredJoinable && featured.meetingUrl) {
                 window.open(featured.meetingUrl, "_blank");
               }
             }}
-            disabled={!featured.meetingUrl && featured.status === "Live"}
+            disabled={!featuredJoinable}
           >
-            {featured.status === "Live" ? "Join Now" : "Upcoming"}
+            {featuredJoinable ? "Join Now" : "Locked"}
           </Button>
           <Button variant="secondary" size="sm" className="flex-1 rounded-none">
             <Video size={15} /> Details
@@ -107,7 +111,10 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
       </motion.div>
 
       <ul className="mt-4 space-y-2.5">
-        {rest.map((c) => (
+        {rest.map((c) => {
+          const canJoin = isJoinable(c);
+
+          return (
           <li key={c.id} className="flex items-center gap-3">
             <Image 
               src={c.instructor.avatar || "https://i.pravatar.cc/120?img=1"} 
@@ -125,14 +132,15 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
               size="sm"
               className="px-3 rounded-none"
               onClick={() => {
-                if (c.meetingUrl) window.open(c.meetingUrl, "_blank");
+                if (canJoin && c.meetingUrl) window.open(c.meetingUrl, "_blank");
               }}
-              disabled={!c.meetingUrl}
+              disabled={!canJoin}
             >
-              Join
+              {canJoin ? "Join" : "Locked"}
             </Button>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );

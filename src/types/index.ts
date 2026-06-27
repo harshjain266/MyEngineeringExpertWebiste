@@ -12,9 +12,13 @@ export type CourseCategory =
 
 export interface Instructor {
   id: string;
+  userId?: string;
   name: string;
   title: string;
   avatar: string;
+  bio?: string;
+  qualifications?: string;
+  experience?: string;
   rating: number;
   students: number;
 }

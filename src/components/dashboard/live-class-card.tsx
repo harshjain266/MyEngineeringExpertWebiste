@@ -21,6 +21,10 @@ function formatDate(iso: string) {
 }
 
 export function LiveClassCard({ item, isLive }: { item: any; isLive?: boolean }) {
+  const canJoin =
+    (item.status === "Live" || item.status === "Ongoing" || isLive) &&
+    Boolean(item.meetingUrl);
+
   return (
     <div className="flex flex-col overflow-hidden rounded-none border border-surface-muted bg-white shadow-soft transition-all hover:shadow-card">
       <div className="relative aspect-video overflow-hidden bg-brand-50">
@@ -28,12 +32,12 @@ export function LiveClassCard({ item, isLive }: { item: any; isLive?: boolean })
           <Radio size={48} className={isLive ? "text-rose-500 animate-pulse" : "text-brand-200"} />
         </div>
         <div className="absolute left-3 top-3">
-          {isLive ? (
+          {canJoin ? (
             <Badge variant="live" className="gap-1 rounded-none">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> LIVE
             </Badge>
           ) : (
-            <Badge variant="warning" className="rounded-none">Upcoming</Badge>
+            <Badge variant="warning" className="rounded-none">Waiting</Badge>
           )}
         </div>
       </div>
@@ -68,14 +72,19 @@ export function LiveClassCard({ item, isLive }: { item: any; isLive?: boolean })
         <div className="mt-auto pt-6">
           <Button
             className="w-full rounded-none gap-2"
-            onClick={isLive ? undefined : () => {}} // In a real app, this might show a toast for reminders
+            onClick={() => {
+              if (canJoin && item.meetingUrl) {
+                window.open(item.meetingUrl, "_blank");
+              }
+            }}
+            disabled={!canJoin}
           >
-            {isLive ? (
-              <a href="https://meet.google.com/vio-bfcr-toq" target="_blank" className="flex items-center gap-2">
+            {canJoin ? (
+              <>
                 <Video size={18} /> Join Now
-              </a>
+              </>
             ) : (
-              "Set Reminder"
+              "Teacher has not started"
             )}
           </Button>
         </div>

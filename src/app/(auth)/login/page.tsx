@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,6 +9,14 @@ import { Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginShell />}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -135,6 +144,21 @@ export default function LoginPage() {
             <Link href="#" className="underline">Privacy Policy</Link>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function LoginShell() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-8 shadow-lg">
+        <div className="h-8 rounded-lg bg-slate-100" />
+        <div className="space-y-4">
+          <div className="h-11 rounded-lg bg-slate-100" />
+          <div className="h-11 rounded-lg bg-slate-100" />
+          <div className="h-12 rounded-xl bg-slate-100" />
+        </div>
       </div>
     </div>
   );

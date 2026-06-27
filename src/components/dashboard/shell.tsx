@@ -19,7 +19,7 @@ export function DashboardShell({
     <div className="flex min-h-screen bg-surface-subtle">
       {/* Desktop sidebar */}
       <div className="sticky top-0 hidden h-screen lg:block">
-        <Sidebar />
+        <Sidebar user={user} />
       </div>
 
       {/* Mobile drawer */}
@@ -40,7 +40,7 @@ export function DashboardShell({
               transition={{ type: "spring", stiffness: 320, damping: 34 }}
               className="fixed inset-y-0 left-0 z-50 lg:hidden"
             >
-              <Sidebar onClose={() => setOpen(false)} />
+              <Sidebar user={user} onClose={() => setOpen(false)} />
             </motion.div>
           </>
         )}

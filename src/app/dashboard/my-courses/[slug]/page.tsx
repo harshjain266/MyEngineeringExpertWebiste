@@ -56,67 +56,77 @@ export default async function CourseLiveClassesPage({ params }: Params) {
 
               <div className="grid gap-4">
                 {classes.map((lc) => (
-                  <div 
-                    key={lc.id}
-                    className="group relative flex flex-col overflow-hidden rounded-2xl border border-surface-muted bg-white p-5 transition-all hover:border-brand-200 hover:shadow-soft sm:flex-row sm:items-center sm:gap-6"
-                  >
-                    {lc.status === "Live" && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-rose-500" />
-                    )}
-                    
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-center gap-3">
-                        {lc.status === "Live" ? (
-                          <Badge variant="live" className="gap-1 animate-pulse">
-                            <span className="h-1.5 w-1.5 rounded-full bg-white" /> LIVE NOW
-                          </Badge>
-                        ) : (
-                          <Badge variant="neutral" className="text-ink-soft">Upcoming</Badge>
+                  (() => {
+                    const canJoin =
+                      (lc.status === "Live" || lc.status === "Ongoing") &&
+                      Boolean(lc.meetingUrl);
+
+                    return (
+                      <div
+                        key={lc.id}
+                        className="group relative flex flex-col overflow-hidden rounded-2xl border border-surface-muted bg-white p-5 transition-all hover:border-brand-200 hover:shadow-soft sm:flex-row sm:items-center sm:gap-6"
+                      >
+                        {canJoin && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-rose-500" />
                         )}
-                        <span className="text-xs font-medium text-ink-muted">
-                          {lc.topic}
-                        </span>
+
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-center gap-3">
+                            {canJoin ? (
+                              <Badge variant="live" className="gap-1 animate-pulse">
+                                <span className="h-1.5 w-1.5 rounded-full bg-white" /> LIVE NOW
+                              </Badge>
+                            ) : (
+                              <Badge variant="neutral" className="text-ink-soft">
+                                Waiting for teacher
+                              </Badge>
+                            )}
+                            <span className="text-xs font-medium text-ink-muted">
+                              {lc.topic}
+                            </span>
+                          </div>
+
+                          <h3 className="font-display text-lg font-bold text-ink group-hover:text-brand-700 transition-colors">
+                            {lc.title}
+                          </h3>
+
+                          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-soft">
+                            <span className="flex items-center gap-2">
+                              <Calendar size={16} className="text-brand-600" />
+                              {new Date(lc.startsAt).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <Clock size={16} className="text-brand-600" />
+                              {new Date(lc.startsAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} – {new Date(lc.endsAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <User size={16} className="text-brand-600" />
+                              {lc.instructor.name}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-5 flex items-center gap-3 sm:mt-0">
+                          {canJoin ? (
+                            <a
+                              href={lc.meetingUrl ?? undefined}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full sm:w-auto"
+                            >
+                              <Button className="w-full gap-2 rounded-xl" size="lg">
+                                Join Now <ExternalLink size={16} />
+                              </Button>
+                            </a>
+                          ) : (
+                            <Button disabled className="w-full gap-2 rounded-xl" size="lg" variant="secondary">
+                              Teacher has not started yet
+                            </Button>
+                          )}
+                        </div>
                       </div>
-
-                      <h3 className="font-display text-lg font-bold text-ink group-hover:text-brand-700 transition-colors">
-                        {lc.title}
-                      </h3>
-
-                      <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-soft">
-                        <span className="flex items-center gap-2">
-                          <Calendar size={16} className="text-brand-600" />
-                          {new Date(lc.startsAt).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
-                        </span>
-                        <span className="flex items-center gap-2">
-                          <Clock size={16} className="text-brand-600" />
-                          {new Date(lc.startsAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} – {new Date(lc.endsAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <span className="flex items-center gap-2">
-                          <User size={16} className="text-brand-600" />
-                          {lc.instructor.name}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 flex items-center gap-3 sm:mt-0">
-                      {lc.meetingUrl ? (
-                        <a 
-                          href={lc.meetingUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="w-full sm:w-auto"
-                        >
-                          <Button className="w-full gap-2 rounded-xl" size="lg">
-                            Join Now <ExternalLink size={16} />
-                          </Button>
-                        </a>
-                      ) : (
-                        <Button disabled className="w-full gap-2 rounded-xl" size="lg" variant="outline">
-                          Link Unavailable
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                    );
+                  })()
                 ))}
               </div>
             </section>

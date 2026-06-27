@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   BookOpen,
@@ -169,7 +170,7 @@ export function CourseDetailView({
             <SchedulePanel detail={detail} />
           </section>
           <section id="teachers" className="scroll-mt-32">
-            <TeachersPanel detail={detail} />
+            <TeachersPanel course={course} detail={detail} />
           </section>
           <section id="more-details" className="scroll-mt-32">
             <MoreDetailsPanel detail={detail} />
@@ -466,11 +467,35 @@ function SchedulePanel({ detail }: { detail: CourseDetail }) {
   );
 }
 
-function TeachersPanel({ detail }: { detail: CourseDetail }) {
+function TeachersPanel({ course, detail }: { course: Course; detail: CourseDetail }) {
+  const supportTeachers = detail.teachers.filter((t) => t.name !== course.instructor.name);
+
   return (
     <Card title="Know your Teachers">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {detail.teachers.map((t, i) => (
+        <Link
+          href={`/teachers/${course.instructor.id}`}
+          className="group flex flex-col items-center rounded-2xl border border-brand-200 bg-brand-50/60 p-5 text-center transition-all hover:-translate-y-1 hover:border-brand-400 hover:bg-white hover:shadow-card"
+        >
+          <div className="relative h-20 w-20 overflow-hidden rounded-full ring-4 ring-white">
+            <Image
+              src={course.instructor.avatar}
+              alt={course.instructor.name}
+              fill
+              sizes="80px"
+              className="object-cover"
+            />
+          </div>
+          <div className="mt-3 font-semibold text-ink transition-colors group-hover:text-brand-700">
+            {course.instructor.name}
+          </div>
+          <div className="text-sm text-ink-muted">{course.instructor.title}</div>
+          <span className="mt-2 rounded-full bg-white px-3 py-1 text-xs font-bold text-brand-700">
+            Lead Faculty
+          </span>
+        </Link>
+
+        {supportTeachers.map((t, i) => (
           <div
             key={`${t.name}-${i}`}
             className="flex flex-col items-center rounded-2xl border border-surface-muted p-5 text-center"

@@ -63,14 +63,17 @@ export function ProgramCourseCard({
       {/* ── Body ── */}
       <div className="flex flex-1 flex-col gap-3 p-4">
         {/* Instructor */}
-        <div className="flex items-center gap-2">
+        <Link
+          href={`/teachers/${course.instructor.id}`}
+          className="flex items-center gap-2 rounded-lg transition-colors hover:text-brand-700"
+        >
           <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-700">
             {course.instructor.name.slice(0, 1)}
           </span>
-          <span className="truncate text-[12px] font-medium text-ink-soft">
+          <span className="truncate text-[12px] font-medium text-ink-soft hover:text-brand-700">
             {course.instructor.name}
           </span>
-        </div>
+        </Link>
 
         {/* Meta chips */}
         <div className="flex flex-wrap gap-2">

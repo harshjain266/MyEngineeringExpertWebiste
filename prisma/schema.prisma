@@ -22,17 +22,23 @@ model User {
   progress    LessonProgress[]
   orders      Order[]
   wishlist    Wishlist[]
+  instructor  Instructor?
 }
 
 model Instructor {
-  id          String      @id @default(uuid())
-  name        String
-  title       String
-  avatar      String?
-  rating      Float       @default(0)
-  students    Int         @default(0)
-  courses     Course[]
-  liveClasses LiveClass[]
+  id             String      @id @default(uuid())
+  userId         String?     @unique
+  user           User?       @relation(fields: [userId], references: [id])
+  name           String
+  title          String
+  avatar         String?
+  bio            String?     @db.Text
+  qualifications String?     @db.Text
+  experience     String?     @db.Text
+  rating         Float       @default(0)
+  students       Int         @default(0)
+  courses        Course[]
+  liveClasses    LiveClass[]
 }
 
 model Course {

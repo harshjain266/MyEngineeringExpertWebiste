@@ -9,8 +9,8 @@ export const metadata: Metadata = { title: "Live Classes" };
 export default async function LiveClassesPage() {
   const liveClasses = await getAllLiveClasses();
 
-  const live = liveClasses.filter((c) => c.status === "Live");
-  const upcoming = liveClasses.filter((c) => c.status !== "Live");
+  const live = liveClasses.filter((c) => c.status === "Live" || c.status === "Ongoing");
+  const upcoming = liveClasses.filter((c) => c.status !== "Live" && c.status !== "Ongoing");
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">

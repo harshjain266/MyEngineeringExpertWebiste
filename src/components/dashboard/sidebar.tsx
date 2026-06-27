@@ -7,17 +7,26 @@ import { Sparkles, X, LogOut } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { SIDEBAR_NAV } from "@/config/nav";
+import { sidebarNavForRole } from "@/config/nav";
 import { cn } from "@/lib/utils";
+import { roleLabel } from "@/lib/role-routes";
+import type { User } from "@/types";
 import { signOut } from "next-auth/react";
 
-export function Sidebar({ onClose }: { onClose?: () => void }) {
+export function Sidebar({ user, onClose }: { user: User; onClose?: () => void }) {
   const pathname = usePathname();
+  const nav = sidebarNavForRole(user.role);
+  const isStudent = user.role === "student";
 
   return (
     <aside className="flex h-full w-72 flex-col border-r border-surface-muted bg-white">
       <div className="flex h-16 items-center justify-between px-5">
-        <Logo tagline={false} />
+        <div>
+          <Logo tagline={false} />
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-muted/70">
+            {roleLabel(user.role)} Portal
+          </p>
+        </div>
         {onClose && (
           <button onClick={onClose} className="lg:hidden" aria-label="Close menu">
             <X size={20} className="text-ink-soft" />
@@ -26,7 +35,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-        {SIDEBAR_NAV.map((item) => {
+        {nav.map((item) => {
           const active =
             pathname === item.href ||
             (item.href !== "/dashboard" && pathname.startsWith(item.href));
@@ -80,14 +89,20 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       <div className="m-3 rounded-2xl bg-brand-gradient p-4 text-white shadow-glow">
         <div className="flex items-center gap-2">
           <Sparkles size={18} className="text-amber-300" />
-          <span className="font-display text-sm font-bold">Upgrade to Premium</span>
+          <span className="font-display text-sm font-bold">
+            {isStudent ? "Upgrade to Premium" : "Profile Visibility"}
+          </span>
         </div>
         <p className="mt-1.5 text-xs text-white/80">
-          Unlock all features, test series, notes &amp; more.
+          {isStudent
+            ? "Unlock all features, test series, notes & more."
+            : "Complete your profile so students can trust and discover you."}
         </p>
-        <Button variant="secondary" size="sm" className="mt-3 w-full">
-          Upgrade Now
-        </Button>
+        {isStudent ? (
+          <Button variant="secondary" size="sm" className="mt-3 w-full">
+            Upgrade Now
+          </Button>
+        ) : null}
       </div>
     </aside>
   );

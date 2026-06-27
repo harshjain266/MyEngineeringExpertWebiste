@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { LiveStatus, PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
@@ -22,7 +22,7 @@ async function main() {
       meetingUrl: 'https://meet.google.com/abc-defg-hij',
       startsAt: new Date(now.getTime() + 1000 * 60 * 60 * 2), // in 2 hours
       endsAt: new Date(now.getTime() + 1000 * 60 * 60 * 4),   // in 4 hours
-      status: 'Upcoming',
+      status: LiveStatus.Upcoming,
       instructorId: instructors[0].id,
       courseId: course.id
     });
@@ -35,7 +35,7 @@ async function main() {
       meetingUrl: 'https://meet.google.com/xyz-qprs-tuv',
       startsAt: new Date(now.getTime() + 1000 * 60 * 60 * 24 + 1000 * 60 * 60 * 3), // Tomorrow in 3 hours
       endsAt: new Date(now.getTime() + 1000 * 60 * 60 * 24 + 1000 * 60 * 60 * 5),
-      status: 'Upcoming',
+      status: LiveStatus.Upcoming,
       instructorId: instructors[0].id,
       courseId: course.id
     });
@@ -48,7 +48,7 @@ async function main() {
       meetingUrl: 'https://meet.google.com/mno-pjkl-xyz',
       startsAt: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 2 + 1000 * 60 * 60 * 4),
       endsAt: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 2 + 1000 * 60 * 60 * 6),
-      status: 'Upcoming',
+      status: LiveStatus.Upcoming,
       instructorId: instructors[0].id,
       courseId: course.id
     });

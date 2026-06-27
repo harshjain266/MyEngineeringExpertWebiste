@@ -42,7 +42,10 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
           </h3>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <Link
+          href={`/teachers/${course.instructor.id}`}
+          className="flex items-center gap-2 rounded-lg transition-colors hover:text-brand-700"
+        >
           <Image
             src={course.instructor.avatar}
             alt={course.instructor.name}
@@ -50,8 +53,10 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
             height={20}
             className="rounded-full"
           />
-          <span className="text-[11px] text-ink-soft">{course.instructor.name}</span>
-        </div>
+          <span className="text-[11px] text-ink-soft hover:text-brand-700">
+            {course.instructor.name}
+          </span>
+        </Link>
 
         <div className="flex items-center gap-1.5 text-[11px] font-medium text-ink-muted">
           <span className="flex items-center gap-1 rounded-full bg-surface-subtle px-2 py-0.5">

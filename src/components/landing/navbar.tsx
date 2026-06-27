@@ -19,6 +19,7 @@ import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { useAuthModal } from "@/components/auth/auth-modal";
 import { cn } from "@/lib/utils";
+import { portalHrefForRole, roleLabel } from "@/lib/role-routes";
 
 export interface MenuProgram {
   slug: string;
@@ -36,6 +37,7 @@ export interface MenuGroup {
 }
 
 const QUICK_LINKS = [
+  { label: "Teachers", href: "/teachers" },
   { label: "Live Classes", href: "/#features" },
   { label: "EE Skills", href: "/#features" },
 ];
@@ -45,6 +47,8 @@ export function Navbar({ menu }: { menu: MenuGroup[] }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: session, status } = useSession();
   const isAuthed = status === "authenticated";
+  const role = (session?.user as any)?.role;
+  const portalHref = portalHrefForRole(role);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -69,13 +73,13 @@ export function Navbar({ menu }: { menu: MenuGroup[] }) {
         <Logo />
 
         <div className="hidden items-center gap-1 lg:flex">
-          <AllCoursesMenu menu={menu} isAuthed={isAuthed} />
+          <AllCoursesMenu menu={menu} isAuthed={isAuthed} role={role} />
           {isAuthed && (
             <Link
-              href="/dashboard/my-courses"
+              href={portalHref}
               className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-muted hover:text-brand-700"
             >
-              My Courses
+              {roleLabel(role)} Portal
             </Link>
           )}
           {QUICK_LINKS.map((l) => (
@@ -91,7 +95,11 @@ export function Navbar({ menu }: { menu: MenuGroup[] }) {
 
         <div className="hidden items-center gap-2 md:flex">
           {isAuthed ? (
-            <UserMenu name={session?.user?.name ?? "Student"} avatar={(session?.user as any)?.avatar} />
+            <UserMenu
+              name={session?.user?.name ?? "Student"}
+              avatar={(session?.user as any)?.avatar}
+              role={role}
+            />
           ) : (
             <LoginButton />
           )}
@@ -111,6 +119,7 @@ export function Navbar({ menu }: { menu: MenuGroup[] }) {
           <MobileMenu
             menu={menu}
             isAuthed={isAuthed}
+            role={role}
             onClose={() => setMobileOpen(false)}
           />
         )}
@@ -121,10 +130,19 @@ export function Navbar({ menu }: { menu: MenuGroup[] }) {
 
 /* ───────────────────────── All Courses mega-menu ───────────────────────── */
 
-function AllCoursesMenu({ menu, isAuthed }: { menu: MenuGroup[]; isAuthed: boolean }) {
+function AllCoursesMenu({
+  menu,
+  isAuthed,
+  role,
+}: {
+  menu: MenuGroup[];
+  isAuthed: boolean;
+  role?: any;
+}) {
   const [open, setOpen] = useState(false);
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const portalHref = portalHrefForRole(role);
 
   const allPrograms = menu.flatMap((g) => g.programs);
   const active = allPrograms.find((p) => p.slug === activeSlug) ?? allPrograms[0] ?? null;
@@ -171,10 +189,10 @@ function AllCoursesMenu({ menu, isAuthed }: { menu: MenuGroup[]; isAuthed: boole
                 </span>
                 {isAuthed && (
                   <Link
-                    href="/dashboard/my-courses"
+                    href={portalHref}
                     className="flex items-center gap-1.5 rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-100"
                   >
-                    <BookOpen size={13} /> My Learning
+                    <BookOpen size={13} /> {roleLabel(role)} Portal
                   </Link>
                 )}
               </div>
@@ -323,9 +341,11 @@ function LoginButton() {
   );
 }
 
-function UserMenu({ name, avatar }: { name: string; avatar?: string }) {
+function UserMenu({ name, avatar, role }: { name: string; avatar?: string; role?: any }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const portalHref = portalHrefForRole(role);
+  const isStudent = role === "student" || !role;
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -370,19 +390,21 @@ function UserMenu({ name, avatar }: { name: string; avatar?: string }) {
             className="absolute right-0 top-full mt-2 w-52 overflow-hidden rounded-2xl border border-surface-muted bg-white p-1.5 shadow-card"
           >
             <Link
-              href="/dashboard"
+              href={portalHref}
               onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-muted hover:text-brand-700"
             >
-              <LayoutDashboard size={16} /> Dashboard
+              <LayoutDashboard size={16} /> {roleLabel(role)} Portal
             </Link>
-            <Link
-              href="/dashboard/my-courses"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-muted hover:text-brand-700"
-            >
-              <BookOpen size={16} /> My Courses
-            </Link>
+            {isStudent ? (
+              <Link
+                href="/dashboard/my-courses"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-muted hover:text-brand-700"
+              >
+                <BookOpen size={16} /> My Courses
+              </Link>
+            ) : null}
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
               className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50"
@@ -401,13 +423,17 @@ function UserMenu({ name, avatar }: { name: string; avatar?: string }) {
 function MobileMenu({
   menu,
   isAuthed,
+  role,
   onClose,
 }: {
   menu: MenuGroup[];
   isAuthed: boolean;
+  role?: any;
   onClose: () => void;
 }) {
   const { open } = useAuthModal();
+  const portalHref = portalHrefForRole(role);
+  const isStudent = role === "student" || !role;
 
   return (
     <motion.div
@@ -419,13 +445,22 @@ function MobileMenu({
       <div className="container-px max-h-[70vh] overflow-y-auto py-4">
         {isAuthed && (
           <Link
-            href="/dashboard/my-courses"
+            href={portalHref}
             onClick={onClose}
             className="mb-2 flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-sm font-semibold text-brand-700"
           >
-            <BookOpen size={16} /> My Courses
+            <BookOpen size={16} /> {roleLabel(role)} Portal
           </Link>
         )}
+        {isAuthed && isStudent ? (
+          <Link
+            href="/dashboard/my-courses"
+            onClick={onClose}
+            className="mb-2 flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-ink-soft hover:bg-surface-muted"
+          >
+            <BookOpen size={16} /> My Courses
+          </Link>
+        ) : null}
         {menu.map((g) => (
           <div key={g.group} className="mb-3">
             <div className="px-1 py-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
