@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import type { User } from "@/types";
+import { createAndSendVerificationEmail } from "@/lib/email-verification";
 
 const DEFAULT_AVATAR = (seed: string) =>
   `https://i.pravatar.cc/160?u=${encodeURIComponent(seed)}`;
@@ -37,6 +38,11 @@ export const authOptions: NextAuthOptions = {
 
         if (!isPasswordValid) {
           throw new Error("Invalid password");
+        }
+
+        if (!user.emailVerified) {
+          await createAndSendVerificationEmail(user);
+          throw new Error("EMAIL_NOT_VERIFIED");
         }
 
         return {

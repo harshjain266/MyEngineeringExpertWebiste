@@ -25,6 +25,10 @@ services:
         sync: false
       - key: NEXT_PUBLIC_APP_NAME
         value: EngineeringExpert
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: EngineeringExpert <noreply@myengineeringexpert.com>
       - key: RAZORPAY_KEY_ID
         value: rzp_test_SyQk8lkFHKXjYl
       - key: RAZORPAY_KEY_SECRET

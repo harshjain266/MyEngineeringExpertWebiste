@@ -77,6 +77,7 @@ async function main() {
       name: "Aditya Kumar",
       email: "aditya.kumar@email.com",
       password: hashedPassword,
+      emailVerified: new Date(),
       avatar: "https://i.pravatar.cc/160?img=12",
       role: "student",
     },

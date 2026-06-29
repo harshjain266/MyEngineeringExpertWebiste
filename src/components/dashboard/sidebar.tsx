@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Sparkles, X, LogOut } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,6 @@ import { sidebarNavForRole } from "@/config/nav";
 import { cn } from "@/lib/utils";
 import { roleLabel } from "@/lib/role-routes";
 import type { User } from "@/types";
-import { signOut } from "next-auth/react";
 
 export function Sidebar({ user, onClose }: { user: User; onClose?: () => void }) {
   const pathname = usePathname();
@@ -75,16 +74,6 @@ export function Sidebar({ user, onClose }: { user: User; onClose?: () => void })
           );
         })}
       </nav>
-
-      <div className="p-3 border-t border-surface-muted">
-        <button
-          onClick={() => signOut({ callbackUrl: "/" })}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50"
-        >
-          <LogOut size={18} />
-          Logout
-        </button>
-      </div>
 
       <div className="m-3 rounded-2xl bg-brand-gradient p-4 text-white shadow-glow">
         <div className="flex items-center gap-2">

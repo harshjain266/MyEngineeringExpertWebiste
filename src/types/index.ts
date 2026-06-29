@@ -44,6 +44,7 @@ export interface Course {
   plannerUrl?: string;
   popular?: boolean;
   enrollmentCount?: number;
+  isEnrolled?: boolean;
 }
 
 export interface EnrolledCourse {

@@ -27,7 +27,7 @@ function LoginPageContent() {
 
   useEffect(() => {
     if (searchParams.get("registered") === "true") {
-      setSuccess("Registration successful! Please sign in with your credentials.");
+      setSuccess("Registration successful. Please verify your email before signing in.");
     } else if (searchParams.get("logout") === "true") {
       setSuccess("You have been successfully logged out.");
     }
@@ -41,7 +41,11 @@ function LoginPageContent() {
     try {
       const res = await signIn("credentials", { email, password, redirect: false });
       if (res?.error) {
-        setError("Invalid email or password. Please try again.");
+        setError(
+          res.error === "EMAIL_NOT_VERIFIED"
+            ? "Please verify your email. We sent a fresh verification link."
+            : "Invalid email or password. Please try again.",
+        );
         return;
       }
       const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";

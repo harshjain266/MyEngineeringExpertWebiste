@@ -14,6 +14,7 @@ model User {
   avatar      String?
   role        Role             @default(student)
   plan        Plan             @default(free)
+  emailVerified DateTime?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   password    String?
@@ -23,6 +24,18 @@ model User {
   orders      Order[]
   wishlist    Wishlist[]
   instructor  Instructor?
+  emailVerificationTokens EmailVerificationToken[]
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Instructor {

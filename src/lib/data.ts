@@ -3,7 +3,6 @@ import "server-only";
 import * as mock from "@/lib/mock-data";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { cached } from "@/lib/redis";
 import { PROGRAMS, PROGRAM_BY_SLUG } from "@/config/programs";
 import type { Course, EnrolledCourse, LiveClass, LearningStats, Program } from "@/types";
 
@@ -159,21 +158,31 @@ export async function getDashboardData() {
 }
 
 export async function getCourses(): Promise<Course[]> {
-  return cached("all_courses_list", 600, async () => {
-    const dbCourses = await prisma.course.findMany({
-      include: { 
-        instructor: true,
-        _count: {
-          select: { enrollments: true }
-        }
-      }
+  const user = await getCurrentUser();
+  const enrolledCourseIds = new Set<string>();
+
+  if (user) {
+    const enrollments = await prisma.enrollment.findMany({
+      where: { userId: user.id },
+      select: { courseId: true },
     });
-    
-    return dbCourses.map(c => ({
-      ...c,
-      enrollmentCount: (c as any)._count?.enrollments || 0
-    })) as Course[];
+    enrollments.forEach((enrollment) => enrolledCourseIds.add(enrollment.courseId));
+  }
+
+  const dbCourses = await prisma.course.findMany({
+    include: { 
+      instructor: true,
+      _count: {
+        select: { enrollments: true }
+      }
+    }
   });
+
+  return dbCourses.map(c => ({
+    ...c,
+    enrollmentCount: (c as any)._count?.enrollments || 0,
+    isEnrolled: enrolledCourseIds.has(c.id),
+  })) as Course[];
 }
 
 export async function getPrograms(): Promise<Program[]> {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { BookOpen, Clock, Signal, Users } from "lucide-react";
+import { BookOpen, Clock, PlayCircle, Signal } from "lucide-react";
 import type { Course } from "@/types";
 import { BuyNowButton } from "@/components/course/buy-now-button";
 import { formatINR } from "@/lib/utils";
@@ -84,9 +84,6 @@ export function ProgramCourseCard({
             <Clock size={11} /> {course.durationHours} hrs
           </span>
           <span className="flex items-center gap-1 rounded-lg bg-surface-subtle px-2.5 py-1 text-[11px] font-medium text-ink-muted">
-            <Users size={11} className="text-brand-600" /> {course.enrollmentCount?.toLocaleString() || "1,240"} students
-          </span>
-          <span className="flex items-center gap-1 rounded-lg bg-surface-subtle px-2.5 py-1 text-[11px] font-medium text-ink-muted">
             <Signal size={11} /> {course.language}
           </span>
         </div>
@@ -96,21 +93,30 @@ export function ProgramCourseCard({
           <p className="mb-3 font-display text-xl font-extrabold text-ink">
             {formatINR(course.price)}
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          {course.isEnrolled ? (
             <Link
-              href={href}
-              className="flex h-9 items-center justify-center rounded-xl border border-surface-muted bg-surface-subtle text-xs font-semibold text-ink-soft transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+              href={`/dashboard/my-courses/${course.slug}`}
+              className="flex h-9 items-center justify-center gap-2 rounded-xl bg-emerald-600 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
             >
-              Explore
+              <PlayCircle size={15} /> Continue Learning
             </Link>
-            <BuyNowButton
-              size="sm"
-              className="h-9 w-full rounded-xl text-xs font-semibold"
-              course={{ courseId: course.id, courseTitle: course.title, amount: course.price }}
-            >
-              Buy Now
-            </BuyNowButton>
-          </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                href={href}
+                className="flex h-9 items-center justify-center rounded-xl border border-surface-muted bg-surface-subtle text-xs font-semibold text-ink-soft transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+              >
+                Explore
+              </Link>
+              <BuyNowButton
+                size="sm"
+                className="h-9 w-full rounded-xl text-xs font-semibold"
+                course={{ courseId: course.id, courseTitle: course.title, amount: course.price }}
+              >
+                Buy Now
+              </BuyNowButton>
+            </div>
+          )}
         </div>
       </div>
     </motion.article>

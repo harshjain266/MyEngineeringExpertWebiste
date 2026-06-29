@@ -73,7 +73,9 @@ export default async function MyCoursesPage() {
 
                 <div className="mt-auto pt-6">
                   <Link href={`/dashboard/my-courses/${item.course.slug}`}>
-                    <Button className="w-full rounded-none">Live Class</Button>
+                    <Button className="w-full rounded-none bg-emerald-600 hover:bg-emerald-700">
+                      Continue Learning
+                    </Button>
                   </Link>
                 </div>
               </div>

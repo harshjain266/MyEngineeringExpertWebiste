@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { createAndSendVerificationEmail } from "@/lib/email-verification";
 
 export async function POST(req: Request) {
   try {
@@ -34,8 +35,10 @@ export async function POST(req: Request) {
       },
     });
 
+    await createAndSendVerificationEmail(user);
+
     return NextResponse.json(
-      { message: "User created successfully", userId: user.id },
+      { message: "Account created. Please verify your email before signing in.", userId: user.id },
       { status: 201 }
     );
   } catch (error) {

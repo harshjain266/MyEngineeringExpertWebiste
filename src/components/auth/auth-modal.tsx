@@ -84,7 +84,11 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await signIn("credentials", { email, password, redirect: false });
       if (res?.error) {
-        setError("Invalid email or password");
+        setError(
+          res.error === "EMAIL_NOT_VERIFIED"
+            ? "Please verify your email. We sent a fresh verification link."
+            : "Invalid email or password",
+        );
         return;
       }
       const session = await getSession();
@@ -123,7 +127,7 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      setSuccess("Account created successfully! Please sign in.");
+      setSuccess("Account created. Please verify your email before signing in.");
       setTab("login");
       setPassword("");
     } catch {

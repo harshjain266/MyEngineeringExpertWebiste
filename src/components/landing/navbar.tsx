@@ -37,7 +37,6 @@ export interface MenuGroup {
 }
 
 const QUICK_LINKS = [
-  { label: "Teachers", href: "/teachers" },
   { label: "Live Classes", href: "/#features" },
   { label: "EE Skills", href: "/#features" },
 ];

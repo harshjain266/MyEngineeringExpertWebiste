@@ -120,9 +120,11 @@ export function CourseDetailView({
             <span className="flex items-center gap-1">
               <CalendarDays size={14} /> Starts {detail.startsOn}
             </span>
-            <span className="flex items-center gap-1">
-              <Users size={14} className="text-brand-600" /> {course.enrollmentCount?.toLocaleString() || "1,240"} students enrolled
-            </span>
+            {course.enrollmentCount ? (
+              <span className="flex items-center gap-1">
+                <Users size={14} className="text-brand-600" /> {course.enrollmentCount.toLocaleString()} students enrolled
+              </span>
+            ) : null}
           </div>
         </div>
       </div>

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Clock, Users } from "lucide-react";
+import { Clock, PlayCircle } from "lucide-react";
 import type { Course } from "@/types";
 import { Button } from "@/components/ui/button";
 import { BuyNowButton } from "./buy-now-button";
@@ -58,13 +58,6 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
           </span>
         </Link>
 
-        <div className="flex items-center gap-1.5 text-[11px] font-medium text-ink-muted">
-          <span className="flex items-center gap-1 rounded-full bg-surface-subtle px-2 py-0.5">
-            <Users size={12} className="text-brand-600" />
-            {course.enrollmentCount?.toLocaleString() || "1,240"} students
-          </span>
-        </div>
-
         <div className="mt-auto flex items-center justify-between border-t border-surface-muted/60 pt-2.5">
           <div className="flex items-center gap-1 text-[10px] text-ink-muted/60">
             <Clock size={12} /> {course.durationHours} hrs
@@ -74,19 +67,29 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
           </div>
         </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <Link href={`/courses/${course.slug}`} className="contents">
-            <Button variant="secondary" size="sm" className="w-full rounded-none h-8 text-xs">
-              Explore
-            </Button>
-          </Link>
-          <BuyNowButton
-            size="sm"
-            className="w-full rounded-none h-8 text-xs"
-            course={{ courseId: course.id, courseTitle: course.title, amount: course.price }}
-          >
-            Buy
-          </BuyNowButton>
+        <div className="mt-2">
+          {course.isEnrolled ? (
+            <Link href={`/dashboard/my-courses/${course.slug}`} className="contents">
+              <Button size="sm" className="h-8 w-full rounded-none bg-emerald-600 text-xs hover:bg-emerald-700">
+                <PlayCircle size={14} /> Continue Learning
+              </Button>
+            </Link>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <Link href={`/courses/${course.slug}`} className="contents">
+                <Button variant="secondary" size="sm" className="w-full rounded-none h-8 text-xs">
+                  Explore
+                </Button>
+              </Link>
+              <BuyNowButton
+                size="sm"
+                className="w-full rounded-none h-8 text-xs"
+                course={{ courseId: course.id, courseTitle: course.title, amount: course.price }}
+              >
+                Buy
+              </BuyNowButton>
+            </div>
+          )}
         </div>
       </div>
     </motion.article>
