@@ -10,7 +10,7 @@ async function main() {
     const user = await prisma.user.update({
       where: { email },
       data: { role: 'instructor' },
-    }).catch((e) => {
+    }).catch((e: any) => {
       console.error(`User with email ${email} not found:`, e);
       return null;
     });
