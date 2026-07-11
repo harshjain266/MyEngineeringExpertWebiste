@@ -8,23 +8,24 @@ datasource db {
 }
 
 model User {
-  id          String           @id @default(uuid())
-  name        String           @default("Student")
-  email       String?          @unique
-  avatar      String?
-  role        Role             @default(student)
-  plan        Plan             @default(free)
-  emailVerified DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  password    String?
-  phone       String?          @unique
-  enrollments Enrollment[]
-  progress    LessonProgress[]
-  orders      Order[]
-  wishlist    Wishlist[]
-  instructor  Instructor?
+  id                      String                   @id @default(uuid())
+  name                    String                   @default("Student")
+  email                   String?                  @unique
+  avatar                  String?
+  role                    Role                     @default(student)
+  plan                    Plan                     @default(free)
+  emailVerified           DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  password                String?
+  phone                   String?                  @unique
+  isDisabled              Boolean                  @default(false)
   emailVerificationTokens EmailVerificationToken[]
+  enrollments             Enrollment[]
+  instructor              Instructor?
+  progress                LessonProgress[]
+  orders                  Order[]
+  wishlist                Wishlist[]
 }
 
 model EmailVerificationToken {
@@ -41,16 +42,16 @@ model EmailVerificationToken {
 model Instructor {
   id             String      @id @default(uuid())
   userId         String?     @unique
-  user           User?       @relation(fields: [userId], references: [id])
   name           String
   title          String
   avatar         String?
-  bio            String?     @db.Text
-  qualifications String?     @db.Text
-  experience     String?     @db.Text
+  bio            String?
+  qualifications String?
+  experience     String?
   rating         Float       @default(0)
   students       Int         @default(0)
   courses        Course[]
+  user           User?       @relation(fields: [userId], references: [id])
   liveClasses    LiveClass[]
 }
 
@@ -75,11 +76,12 @@ model Course {
   program       String       @default("btech-bca")
   plannerUrl    String?
   popular       Boolean      @default(false)
+  disabled      Boolean      @default(false)
   instructor    Instructor   @relation(fields: [instructorId], references: [id])
   enrollments   Enrollment[]
   lessons       Lesson[]
-  wishlist      Wishlist[]
   liveClasses   LiveClass[]
+  wishlist      Wishlist[]
 
   @@index([category, level])
   @@index([program])
@@ -129,8 +131,8 @@ model LiveClass {
   status       LiveStatus @default(Upcoming)
   instructorId String
   courseId     String?
-  instructor   Instructor @relation(fields: [instructorId], references: [id])
   course       Course?    @relation(fields: [courseId], references: [id])
+  instructor   Instructor @relation(fields: [instructorId], references: [id])
 }
 
 model Wishlist {

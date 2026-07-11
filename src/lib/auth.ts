@@ -40,6 +40,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid password");
         }
 
+        if (user.isDisabled) {
+          throw new Error("This account has been disabled by the administrator.");
+        }
+
         if (!user.emailVerified) {
           await createAndSendVerificationEmail(user);
           throw new Error("EMAIL_NOT_VERIFIED");

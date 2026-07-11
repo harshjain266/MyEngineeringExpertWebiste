@@ -35,3 +35,5 @@ yarn-error.log*
 
 # prisma
 /prisma/*.db
+.vercel
+.env*

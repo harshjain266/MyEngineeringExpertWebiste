@@ -44,7 +44,9 @@ function LoginPageContent() {
         setError(
           res.error === "EMAIL_NOT_VERIFIED"
             ? "Please verify your email. We sent a fresh verification link."
-            : "Invalid email or password. Please try again.",
+            : res.error.includes("disabled")
+              ? res.error
+              : "Invalid email or password. Please try again.",
         );
         return;
       }

@@ -87,7 +87,9 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
         setError(
           res.error === "EMAIL_NOT_VERIFIED"
             ? "Please verify your email. We sent a fresh verification link."
-            : "Invalid email or password",
+            : res.error.includes("disabled")
+              ? res.error
+              : "Invalid email or password",
         );
         return;
       }

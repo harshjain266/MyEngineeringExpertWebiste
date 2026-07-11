@@ -152,3 +152,37 @@ export interface ExamCategory {
   tracks: string[];
   accent: string; // tailwind gradient classes
 }
+
+/* ─── Admin management types ────────────────────────────────── */
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: "student" | "instructor" | "admin";
+  isDisabled: boolean;
+  createdAt: string;
+  enrollmentCount: number;
+}
+
+export interface AdminInstructor {
+  id: string;
+  name: string;
+  title: string;
+  email: string;
+  isDisabled: boolean;
+  courseCount: number;
+}
+
+export interface AdminCourse {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  price: number;
+  disabled: boolean;
+  instructorName: string;
+  enrollmentCount: number;
+  createdAt: string;
+}

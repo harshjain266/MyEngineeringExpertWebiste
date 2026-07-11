@@ -4,7 +4,10 @@ import * as mock from "@/lib/mock-data";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { PROGRAMS, PROGRAM_BY_SLUG } from "@/config/programs";
-import type { Course, EnrolledCourse, LiveClass, LearningStats, Program } from "@/types";
+import type { 
+  Course, EnrolledCourse, LiveClass, LearningStats, Program, 
+  AdminUser, AdminInstructor, AdminCourse 
+} from "@/types";
 
 /**
  * Data-access layer.
@@ -120,7 +123,8 @@ export async function getDashboardData() {
     prisma.course.findMany({
       where: {
         id: { notIn: enrolled.map(e => e.course.id) },
-        popular: true
+        popular: true,
+        disabled: false
       },
       include: { 
         instructor: true,
@@ -170,6 +174,7 @@ export async function getCourses(): Promise<Course[]> {
   }
 
   const dbCourses = await prisma.course.findMany({
+    where: { disabled: false },
     include: { 
       instructor: true,
       _count: {
@@ -195,7 +200,7 @@ export async function getProgramBySlug(slug: string): Promise<Program | undefine
 
 export async function getCoursesByProgram(programSlug: string): Promise<Course[]> {
   const dbCourses = await prisma.course.findMany({
-    where: { program: programSlug },
+    where: { program: programSlug, disabled: false },
     include: { 
       instructor: true,
       _count: {
@@ -346,5 +351,66 @@ export async function getOrders() {
     course: o.course,
     amount: o.amount,
     status: o.status as any
+  }));
+}
+
+/* ─── Admin queries ─────────────────────────────────────────── */
+
+export async function getAdminUsers(): Promise<AdminUser[]> {
+  const users = await prisma.user.findMany({
+    where: { role: "student" },
+    orderBy: { createdAt: "desc" },
+    include: {
+      _count: { select: { enrollments: true } },
+    },
+  });
+  return users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email ?? "",
+    phone: u.phone ?? "",
+    role: u.role,
+    isDisabled: u.isDisabled,
+    createdAt: u.createdAt.toISOString(),
+    enrollmentCount: u._count.enrollments,
+  }));
+}
+
+export async function getAdminInstructors(): Promise<AdminInstructor[]> {
+  const instructors = await prisma.instructor.findMany({
+    orderBy: { name: "asc" },
+    include: {
+      user: { select: { isDisabled: true, email: true } },
+      _count: { select: { courses: true } },
+    },
+  });
+  return instructors.map((i) => ({
+    id: i.id,
+    name: i.name,
+    title: i.title,
+    email: i.user?.email ?? "",
+    isDisabled: i.user?.isDisabled ?? false,
+    courseCount: i._count.courses,
+  }));
+}
+
+export async function getAdminCourses(): Promise<AdminCourse[]> {
+  const courses = await prisma.course.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      instructor: { select: { name: true } },
+      _count: { select: { enrollments: true } },
+    },
+  });
+  return courses.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    title: c.title,
+    category: c.category,
+    price: c.price,
+    disabled: c.disabled,
+    instructorName: c.instructor.name,
+    enrollmentCount: c._count.enrollments,
+    createdAt: c.createdAt.toISOString(),
   }));
 }
