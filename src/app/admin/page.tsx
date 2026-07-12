@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatINR } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import type { Prisma } from "@prisma/client";
+
+type OrderWithUser = Prisma.OrderGetPayload<{ include: { user: true } }>;
 
 export default async function AdminDashboardPage() {
   const user = await getCurrentUser();
@@ -86,7 +89,7 @@ export default async function AdminDashboardPage() {
               {recentOrders.length === 0 ? (
               <div className="p-10 text-center text-ink-muted">No sales recorded yet.</div>
               ) : (
-                recentOrders.map((order) => (
+                recentOrders.map((order: OrderWithUser) => (
                   <div key={order.id} className="flex items-center justify-between px-6 py-4">
                     <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 font-bold text-brand-700">
