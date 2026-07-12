@@ -302,7 +302,7 @@ export async function getAllLiveClasses(): Promise<LiveClass[]> {
       where: { userId: user.id },
       select: { courseId: true },
     });
-    const enrolledCourseIds = enrollments.map((e) => e.courseId);
+    const enrolledCourseIds = enrollments.map((e: { courseId: string }) => e.courseId);
     courseFilter = {
       OR: [
         { courseId: null },
