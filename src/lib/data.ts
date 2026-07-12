@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { PROGRAMS, PROGRAM_BY_SLUG } from "@/config/programs";
 import type { 
-  Course, EnrolledCourse, LiveClass, LearningStats, Program, 
+  Course, EnrolledCourse, LiveClass, LearningStats, Program, Announcement,
   AdminUser, AdminInstructor, AdminCourse 
 } from "@/types";
 
@@ -64,12 +64,12 @@ export async function getDashboardData() {
   }
 
   // Map enrollments to EnrolledCourse type
-  const enrolled: EnrolledCourse[] = dbUser.enrollments.map(e => ({
+  const enrolled: EnrolledCourse[] = dbUser.enrollments.map((e: { progress: number; lastAccessed: Date; course: { id: string; slug: string; title: string; category: string; level: string; price: number; originalPrice: number; rating: number; ratingCount: number; durationHours: number; lectures: number; language: string; thumbnail: string | null; badge: string | null; tags: string[]; program: string; plannerUrl: string | null; popular: boolean; instructor: { id: string; name: string; title: string | null; avatar: string | null; bio: string | null }; _count: { enrollments: number } } }) => ({
     course: {
       ...e.course,
       instructor: e.course.instructor,
       enrollmentCount: (e.course as any)._count?.enrollments || 0,
-    } as Course,
+    } as unknown as Course,
     progress: e.progress,
     lastAccessed: e.lastAccessed.toISOString(),
   }));
@@ -143,21 +143,21 @@ export async function getDashboardData() {
   return {
     stats,
     enrolled,
-    recommended: recommended.map(c => ({
+    recommended: recommended.map((c: Record<string, unknown>) => ({
       ...c,
       enrollmentCount: (c as any)._count?.enrollments || 0
-    })) as Course[],
-    liveClasses: liveClasses.map(lc => ({
+    })) as unknown as Course[],
+    liveClasses: liveClasses.map((lc: Record<string, unknown>) => ({
       ...lc,
-      startsAt: lc.startsAt.toISOString(),
-      endsAt: lc.endsAt.toISOString(),
-      status: lc.status as any
-    })) as LiveClass[],
-    announcements: announcements.map(a => ({
+      startsAt: (lc as any).startsAt.toISOString(),
+      endsAt: (lc as any).endsAt.toISOString(),
+      status: (lc as any).status as any
+    })) as unknown as LiveClass[],
+    announcements: announcements.map((a: Record<string, unknown>) => ({
       ...a,
-      date: a.date.toISOString().split('T')[0],
-      tone: a.tone as any
-    })),
+      date: (a as any).date.toISOString().split('T')[0],
+      tone: (a as any).tone as any
+    })) as unknown as Announcement[],
   };
 }
 
@@ -170,7 +170,7 @@ export async function getCourses(): Promise<Course[]> {
       where: { userId: user.id },
       select: { courseId: true },
     });
-    enrollments.forEach((enrollment) => enrolledCourseIds.add(enrollment.courseId));
+    enrollments.forEach((enrollment: { courseId: string }) => enrolledCourseIds.add(enrollment.courseId));
   }
 
   const dbCourses = await prisma.course.findMany({
@@ -183,11 +183,11 @@ export async function getCourses(): Promise<Course[]> {
     }
   });
 
-  return dbCourses.map(c => ({
+  return dbCourses.map((c: Record<string, unknown>) => ({
     ...c,
     enrollmentCount: (c as any)._count?.enrollments || 0,
-    isEnrolled: enrolledCourseIds.has(c.id),
-  })) as Course[];
+    isEnrolled: enrolledCourseIds.has((c as any).id),
+  })) as unknown as Course[];
 }
 
 export async function getPrograms(): Promise<Program[]> {
@@ -210,7 +210,7 @@ export async function getCoursesByProgram(programSlug: string): Promise<Course[]
     orderBy: { ratingCount: "desc" },
   });
 
-  return dbCourses.map(c => ({
+  return dbCourses.map((c: Record<string, unknown>) => ({
     ...c,
     enrollmentCount: (c as any)._count?.enrollments || 0
   })) as unknown as Course[];
@@ -232,7 +232,7 @@ export async function getCourseBySlug(slug: string): Promise<Course | undefined>
   return {
     ...course,
     enrollmentCount: (course as any)._count?.enrollments || 0
-  } as Course;
+  } as unknown as Course;
 }
 
 export async function isEnrolled(courseId: string): Promise<boolean> {
@@ -284,12 +284,12 @@ export async function getLiveClassesByCourse(courseId: string): Promise<LiveClas
     take: 7
   });
 
-  return dbLiveClasses.map(lc => ({
+  return dbLiveClasses.map((lc: Record<string, unknown>) => ({
     ...lc,
-    startsAt: lc.startsAt.toISOString(),
-    endsAt: lc.endsAt.toISOString(),
-    status: lc.status as any
-  })) as LiveClass[];
+    startsAt: (lc as any).startsAt.toISOString(),
+    endsAt: (lc as any).endsAt.toISOString(),
+    status: (lc as any).status as any
+  })) as unknown as LiveClass[];
 }
 
 export async function getAllLiveClasses(): Promise<LiveClass[]> {
@@ -328,12 +328,12 @@ export async function getAllLiveClasses(): Promise<LiveClass[]> {
     take: 7
   });
 
-  return dbLiveClasses.map((lc) => ({
+  return dbLiveClasses.map((lc: Record<string, unknown>) => ({
     ...lc,
-    startsAt: lc.startsAt.toISOString(),
-    endsAt: lc.endsAt.toISOString(),
-    status: lc.status as any,
-  })) as LiveClass[];
+    startsAt: (lc as any).startsAt.toISOString(),
+    endsAt: (lc as any).endsAt.toISOString(),
+    status: (lc as any).status as any,
+  })) as unknown as LiveClass[];
 }
 
 export async function getOrders() {
@@ -345,12 +345,12 @@ export async function getOrders() {
     orderBy: { createdAt: 'desc' }
   });
 
-  return dbOrders.map(o => ({
-    id: o.id,
-    date: o.createdAt.toISOString().split('T')[0],
-    course: o.course,
-    amount: o.amount,
-    status: o.status as any
+  return dbOrders.map((o: Record<string, unknown>) => ({
+    id: (o as any).id,
+    date: (o as any).createdAt.toISOString().split('T')[0],
+    course: (o as any).course,
+    amount: (o as any).amount,
+    status: (o as any).status as any
   }));
 }
 
@@ -364,15 +364,15 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
       _count: { select: { enrollments: true } },
     },
   });
-  return users.map((u) => ({
-    id: u.id,
-    name: u.name,
-    email: u.email ?? "",
-    phone: u.phone ?? "",
-    role: u.role,
-    isDisabled: u.isDisabled,
-    createdAt: u.createdAt.toISOString(),
-    enrollmentCount: u._count.enrollments,
+  return users.map((u: Record<string, unknown>) => ({
+    id: (u as any).id,
+    name: (u as any).name,
+    email: (u as any).email ?? "",
+    phone: (u as any).phone ?? "",
+    role: (u as any).role,
+    isDisabled: (u as any).isDisabled,
+    createdAt: (u as any).createdAt.toISOString(),
+    enrollmentCount: (u as any)._count.enrollments,
   }));
 }
 
@@ -384,13 +384,13 @@ export async function getAdminInstructors(): Promise<AdminInstructor[]> {
       _count: { select: { courses: true } },
     },
   });
-  return instructors.map((i) => ({
-    id: i.id,
-    name: i.name,
-    title: i.title,
-    email: i.user?.email ?? "",
-    isDisabled: i.user?.isDisabled ?? false,
-    courseCount: i._count.courses,
+  return instructors.map((i: Record<string, unknown>) => ({
+    id: (i as any).id,
+    name: (i as any).name,
+    title: (i as any).title,
+    email: (i as any).user?.email ?? "",
+    isDisabled: (i as any).user?.isDisabled ?? false,
+    courseCount: (i as any)._count.courses,
   }));
 }
 
@@ -402,15 +402,15 @@ export async function getAdminCourses(): Promise<AdminCourse[]> {
       _count: { select: { enrollments: true } },
     },
   });
-  return courses.map((c) => ({
-    id: c.id,
-    slug: c.slug,
-    title: c.title,
-    category: c.category,
-    price: c.price,
-    disabled: c.disabled,
-    instructorName: c.instructor.name,
-    enrollmentCount: c._count.enrollments,
-    createdAt: c.createdAt.toISOString(),
+  return courses.map((c: Record<string, unknown>) => ({
+    id: (c as any).id,
+    slug: (c as any).slug,
+    title: (c as any).title,
+    category: (c as any).category,
+    price: (c as any).price,
+    disabled: (c as any).disabled,
+    instructorName: (c as any).instructor.name,
+    enrollmentCount: (c as any)._count.enrollments,
+    createdAt: (c as any).createdAt.toISOString(),
   }));
 }
