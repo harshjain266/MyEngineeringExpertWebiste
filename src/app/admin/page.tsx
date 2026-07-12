@@ -12,6 +12,13 @@ type OrderWithUser = {
   user: { name: string; email: string | null };
 };
 
+type RecentUser = {
+  id: string;
+  name: string;
+  email: string | null;
+  createdAt: Date;
+};
+
 export default async function AdminDashboardPage() {
   const user = await getCurrentUser();
   
@@ -122,7 +129,7 @@ export default async function AdminDashboardPage() {
             <h2 className="font-display text-lg font-bold text-ink">New Registrations</h2>
             </div>
           <div className="divide-y divide-surface-muted">
-              {recentUsers.map((u) => (
+              {recentUsers.map((u: RecentUser) => (
                 <div key={u.id} className="flex items-center justify-between px-6 py-4">
                   <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 font-bold text-indigo-600">
