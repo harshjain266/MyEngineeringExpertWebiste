@@ -3,6 +3,7 @@ import Razorpay from "razorpay";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
     */
 
     // DUMMY ENROLLMENT FOR TESTING
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 1. Create a successful order record
       await tx.order.create({
         data: {
