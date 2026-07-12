@@ -18,6 +18,10 @@ import { compactNumber } from "@/lib/utils";
 import ProfileForm from "@/app/instructor/settings/profile/profile-form";
 import { StartClassButton } from "@/components/instructor/start-class-button";
 
+type _LiveClass = { id: string; title: string; topic: string; status: string; startsAt: Date; endsAt: Date; meetingUrl: string | null; courseId: string | null };
+type _BatchCourse = { id: string; slug: string; title: string; thumbnail: string | null; category: string; durationHours: number | null; liveClasses: _LiveClass[]; _count: { enrollments: number; liveClasses: number } };
+type _LiveClassWithCourse = _LiveClass & { course: { title: string; slug: string } };
+
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -57,15 +61,15 @@ export default async function InstructorDashboardPage() {
 
   const now = new Date();
   const batches = instructor?.courses ?? [];
-  const allClasses = batches.flatMap((course) =>
-    course.liveClasses.map((liveClass) => ({ ...liveClass, course })),
+  const allClasses = batches.flatMap((course: _BatchCourse) =>
+    course.liveClasses.map((liveClass: _LiveClass) => ({ ...liveClass, course })),
   );
   const upcomingClasses = allClasses
-    .filter((item) => item.startsAt >= now)
-    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+    .filter((item: _LiveClassWithCourse) => item.startsAt >= now)
+    .sort((a: _LiveClassWithCourse, b: _LiveClassWithCourse) => a.startsAt.getTime() - b.startsAt.getTime());
   const nextClass = upcomingClasses[0];
   const totalStudents = batches.reduce(
-    (sum, course) => sum + course._count.enrollments,
+    (sum: number, course: _BatchCourse) => sum + course._count.enrollments,
     0,
   );
 
@@ -201,8 +205,8 @@ export default async function InstructorDashboardPage() {
             />
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
-              {batches.slice(0, 4).map((course) => {
-                const nextBatchClass = course.liveClasses.find((liveClass) => liveClass.startsAt >= now);
+              {batches.slice(0, 4).map((course: _BatchCourse) => {
+                const nextBatchClass = course.liveClasses.find((liveClass: _LiveClass) => liveClass.startsAt >= now);
 
                 return (
                   <Link
@@ -232,7 +236,7 @@ export default async function InstructorDashboardPage() {
                       <div className="grid grid-cols-3 gap-2">
                         <BatchStat label="Students" value={course._count.enrollments} />
                         <BatchStat label="Classes" value={course._count.liveClasses} />
-                        <BatchStat label="Hours" value={course.durationHours} />
+                        <BatchStat label="Hours" value={course.durationHours ?? 0} />
                       </div>
                       <div className="rounded-2xl bg-surface-subtle p-3">
                         <p className="text-xs font-semibold text-ink-muted">Next session</p>

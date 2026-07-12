@@ -15,6 +15,9 @@ import { Footer } from "@/components/landing/footer";
 import { Badge } from "@/components/ui/badge";
 import { compactNumber, initials } from "@/lib/utils";
 
+type _TeacherCourse = { id: string; title: string };
+type _TeacherInstructor = { id: string; name: string; avatar: string | null; title: string | null; bio: string | null; qualifications: string | null; experience: string | null; students: number; _count: { courses: number }; courses: _TeacherCourse[] };
+
 export const metadata = {
   title: "Our Teachers - EngineeringExpert",
 };
@@ -86,7 +89,7 @@ export default async function TeachersPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {instructors.map((instructor) => {
+            {instructors.map((instructor: _TeacherInstructor) => {
               const profileComplete = Boolean(
                 instructor.bio && instructor.qualifications && instructor.experience,
               );
@@ -176,7 +179,7 @@ export default async function TeachersPage() {
                       </p>
                       {instructor.courses.length > 0 ? (
                         <div className="space-y-2">
-                          {instructor.courses.map((course) => (
+                          {instructor.courses.map((course: _TeacherCourse) => (
                             <div
                               key={course.id}
                               className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-ink-soft"

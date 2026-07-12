@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StartClassButton } from "@/components/instructor/start-class-button";
 
+type _LiveClass = { id: string; title: string; topic: string; status: string; startsAt: Date; endsAt: Date; subject: string | null; meetingUrl: string | null; courseId: string | null };
+
 export const dynamic = "force-dynamic";
 
 interface Params {
@@ -85,9 +87,9 @@ export default async function InstructorBatchDetailPage({ params }: Params) {
   if (!course) notFound();
 
   const now = new Date();
-  const upcoming = course.liveClasses.filter((liveClass) => liveClass.startsAt >= now);
+  const upcoming = course.liveClasses.filter((liveClass: _LiveClass) => liveClass.startsAt >= now);
   const liveCount = course.liveClasses.filter(
-    (liveClass) => liveClass.status === "Live" || liveClass.status === "Ongoing",
+    (liveClass: _LiveClass) => liveClass.status === "Live" || liveClass.status === "Ongoing",
   ).length;
 
   return (
@@ -163,7 +165,7 @@ export default async function InstructorBatchDetailPage({ params }: Params) {
           </div>
         ) : (
           <div className="space-y-4">
-            {course.liveClasses.map((liveClass) => {
+            {course.liveClasses.map((liveClass: _LiveClass) => {
               const isLive = liveClass.status === "Live" || liveClass.status === "Ongoing";
               const isCompleted = liveClass.status === "Completed";
 

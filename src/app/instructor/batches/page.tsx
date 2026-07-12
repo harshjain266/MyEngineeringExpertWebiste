@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { compactNumber } from "@/lib/utils";
 
+type _LiveClass = { id: string; title: string; topic: string; status: string; startsAt: Date; endsAt: Date; meetingUrl: string | null; courseId: string | null };
+type _BatchCourse = { id: string; slug: string; title: string; thumbnail: string | null; category: string; level: string; durationHours: number | null; lectures: number | null; liveClasses: _LiveClass[]; _count: { enrollments: number; liveClasses: number } };
+
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -46,8 +49,8 @@ export default async function InstructorBatchesPage() {
 
   const now = new Date();
   const batches = instructor?.courses ?? [];
-  const totalClasses = batches.reduce((sum, course) => sum + course._count.liveClasses, 0);
-  const totalStudents = batches.reduce((sum, course) => sum + course._count.enrollments, 0);
+  const totalClasses = batches.reduce((sum: number, course: _BatchCourse) => sum + course._count.liveClasses, 0);
+  const totalStudents = batches.reduce((sum: number, course: _BatchCourse) => sum + course._count.enrollments, 0);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -91,8 +94,8 @@ export default async function InstructorBatchesPage() {
         </div>
       ) : (
         <div className="grid gap-5 lg:grid-cols-2">
-          {batches.map((course) => {
-            const nextClass = course.liveClasses.find((liveClass) => liveClass.startsAt >= now);
+          {batches.map((course: _BatchCourse) => {
+            const nextClass = course.liveClasses.find((liveClass: _LiveClass) => liveClass.startsAt >= now);
 
             return (
               <Link
@@ -134,7 +137,7 @@ export default async function InstructorBatchesPage() {
                   <div className="mt-5 grid grid-cols-3 gap-3">
                     <BatchMetric label="Students" value={course._count.enrollments} />
                     <BatchMetric label="Classes" value={course._count.liveClasses} />
-                    <BatchMetric label="Live" value={course.liveClasses.filter((liveClass) => liveClass.status === "Live" || liveClass.status === "Ongoing").length} />
+                    <BatchMetric label="Live" value={course.liveClasses.filter((liveClass: _LiveClass) => liveClass.status === "Live" || liveClass.status === "Ongoing").length} />
                   </div>
 
                   <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">

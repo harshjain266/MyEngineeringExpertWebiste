@@ -9,6 +9,8 @@ import { Footer } from "@/components/landing/footer";
 import { Badge } from "@/components/ui/badge";
 import { Stars } from "@/components/ui/stars";
 
+type _TeacherCourse = { id: string; slug: string; title: string; thumbnail: string | null; level: string };
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const instructor = await prisma.instructor.findUnique({
@@ -96,7 +98,7 @@ export default async function TeacherProfilePage({
               </p>
               <p className="mt-2 text-sm leading-6 text-ink-soft">
                 {instructor.courses.length > 0
-                  ? instructor.courses.slice(0, 2).map((c) => c.title).join(", ")
+                  ? instructor.courses.slice(0, 2).map((c: _TeacherCourse) => c.title).join(", ")
                   : instructor.title}
               </p>
             </div>
@@ -142,7 +144,7 @@ export default async function TeacherProfilePage({
               </p>
             ) : (
               <div className="space-y-4">
-                {instructor.courses.map((course) => (
+                {instructor.courses.map((course: _TeacherCourse) => (
                   <Link href={`/courses/${course.slug}`} key={course.id} className="block group">
                     <div className="flex items-center gap-4 rounded-3xl border border-surface-muted bg-white p-4 shadow-soft transition-colors group-hover:border-brand-300 group-hover:bg-brand-50/40">
                       <div className="relative w-16 h-16 rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
