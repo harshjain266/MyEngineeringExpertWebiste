@@ -4,9 +4,13 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { formatINR } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { Prisma } from "@prisma/client";
-
-type OrderWithUser = Prisma.OrderGetPayload<{ include: { user: true } }>;
+type OrderWithUser = {
+  id: string;
+  course: string;
+  amount: number;
+  createdAt: Date;
+  user: { name: string; email: string | null };
+};
 
 export default async function AdminDashboardPage() {
   const user = await getCurrentUser();
