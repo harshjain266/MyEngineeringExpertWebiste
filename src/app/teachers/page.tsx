@@ -15,8 +15,8 @@ import { Footer } from "@/components/landing/footer";
 import { Badge } from "@/components/ui/badge";
 import { compactNumber, initials } from "@/lib/utils";
 
-type _TeacherCourse = { id: string; title: string };
-type _TeacherInstructor = { id: string; name: string; avatar: string | null; title: string | null; bio: string | null; qualifications: string | null; experience: string | null; students: number; _count: { courses: number }; courses: _TeacherCourse[] };
+type _TeacherCourse = { id: string; title: string; disabled: boolean };
+type _TeacherInstructor = { id: string; name: string; avatar: string | null; title: string | null; bio: string | null; qualifications: string | null; experience: string | null; students: number; courses: _TeacherCourse[] };
 
 export const metadata = {
   title: "Our Teachers - EngineeringExpert",
@@ -28,12 +28,10 @@ export default async function TeachersPage() {
   const instructors = await prisma.instructor.findMany({
     include: {
       courses: {
-        select: { id: true, slug: true, title: true },
+        select: { id: true, slug: true, title: true, disabled: true },
+        where: { disabled: false },
         take: 3,
         orderBy: { title: "asc" },
-      },
-      _count: {
-        select: { courses: true },
       },
     },
     orderBy: [{ rating: "desc" }, { students: "desc" }],
@@ -168,7 +166,7 @@ export default async function TeachersPage() {
                           Courses
                         </p>
                         <p className="mt-1 font-display text-xl font-bold text-ink">
-                          {instructor._count.courses}
+                          {instructor.courses.length}
                         </p>
                       </div>
                     </div>

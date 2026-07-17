@@ -168,6 +168,7 @@ export interface AdminUser {
 
 export interface AdminInstructor {
   id: string;
+  userId?: string;
   name: string;
   title: string;
   email: string;

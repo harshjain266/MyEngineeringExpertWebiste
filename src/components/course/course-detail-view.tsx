@@ -476,7 +476,7 @@ function TeachersPanel({ course, detail }: { course: Course; detail: CourseDetai
     <Card title="Know your Teachers">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link
-          href={`/teachers/${course.instructor.id}`}
+          href={`/teachers/${course.instructor.id}?from=/courses/${course.slug}`}
           className="group flex flex-col items-center rounded-2xl border border-brand-200 bg-brand-50/60 p-5 text-center transition-all hover:-translate-y-1 hover:border-brand-400 hover:bg-white hover:shadow-card"
         >
           <div className="relative h-20 w-20 overflow-hidden rounded-full ring-4 ring-white">

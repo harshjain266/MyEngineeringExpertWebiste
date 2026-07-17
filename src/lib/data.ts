@@ -386,6 +386,7 @@ export async function getAdminInstructors(): Promise<AdminInstructor[]> {
   });
   return instructors.map((i: Record<string, unknown>) => ({
     id: (i as any).id,
+    userId: (i as any).userId ?? undefined,
     name: (i as any).name,
     title: (i as any).title,
     email: (i as any).user?.email ?? "",

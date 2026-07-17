@@ -39,8 +39,8 @@ export const SIDEBAR_NAV: NavItem[] = [
   { label: "My Batches", href: "/instructor/batches", icon: Layers3, roles: ["instructor"] },
   { label: "Public Profile", href: "/instructor/settings/profile", icon: UserRound, roles: ["instructor"] },
   { label: "Admin Overview", href: "/admin", icon: BarChart3, roles: ["admin"] },
-  { label: "Manage", href: "/admin/manage", icon: Users, roles: ["admin"] },
-  { label: "Orders", href: "/admin#orders", icon: ClipboardList, roles: ["admin"] },
+  { label: "Manage", href: "/admin?tab=users", icon: Users, roles: ["admin"] },
+  { label: "Orders", href: "/admin?tab=orders", icon: ClipboardList, roles: ["admin"] },
 ];
 
 export function sidebarNavForRole(role: User["role"]) {

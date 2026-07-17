@@ -29,6 +29,15 @@ export function discountPct(price: number, original: number) {
   return Math.round(((original - price) / original) * 100);
 }
 
+/** Format a date string consistently (avoids hydration mismatch from toLocaleDateString). */
+export function formatDate(iso: string) {
+  const d = new Date(iso);
+  const day = d.getDate().toString().padStart(2, "0");
+  const month = d.toLocaleString("en-US", { month: "short" });
+  const year = d.getFullYear();
+  return `${day} ${month} ${year}`;
+}
+
 export function initials(name: string) {
   return name
     .split(" ")

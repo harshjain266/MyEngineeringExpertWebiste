@@ -9,7 +9,7 @@ import { Footer } from "@/components/landing/footer";
 import { Badge } from "@/components/ui/badge";
 import { Stars } from "@/components/ui/stars";
 
-type _TeacherCourse = { id: string; slug: string; title: string; thumbnail: string | null; level: string };
+type _TeacherCourse = { id: string; slug: string; title: string; thumbnail: string | null; level: string; disabled: boolean };
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -26,11 +26,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function TeacherProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { slug } = await params;
-  
+  const { from } = await searchParams;
+
   const instructor = await prisma.instructor.findUnique({
     where: { id: slug },
     include: {
@@ -42,6 +45,8 @@ export default async function TeacherProfilePage({
     notFound();
   }
 
+  const activeCourses = instructor.courses.filter((c) => !c.disabled);
+
   return (
     <main className="min-h-screen bg-surface-subtle">
       <SiteHeader />
@@ -49,10 +54,10 @@ export default async function TeacherProfilePage({
       <section className="border-b border-surface-muted bg-white pt-28">
         <div className="container-px pb-10">
           <Link
-            href="/teachers"
+            href={from || "/teachers"}
             className="mb-5 inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-800"
           >
-            <ArrowRight size={15} className="mr-1 rotate-180" /> All Teachers
+            <ArrowRight size={15} className="mr-1 rotate-180" /> Back
           </Link>
 
           <div className="grid gap-8 lg:grid-cols-[auto_1fr_auto] lg:items-center">
@@ -87,7 +92,7 @@ export default async function TeacherProfilePage({
               </div>
                 <div className="flex items-center gap-2 rounded-full bg-surface-subtle px-3 py-2">
                   <BookOpen size={15} className="text-brand-600" />
-                  <span><strong className="text-ink">{instructor.courses.length}</strong> courses</span>
+                  <span><strong className="text-ink">{activeCourses.length}</strong> courses</span>
                 </div>
               </div>
             </div>
@@ -97,8 +102,8 @@ export default async function TeacherProfilePage({
                 Teaching Focus
               </p>
               <p className="mt-2 text-sm leading-6 text-ink-soft">
-                {instructor.courses.length > 0
-                  ? instructor.courses.slice(0, 2).map((c: _TeacherCourse) => c.title).join(", ")
+                {activeCourses.length > 0
+                  ? activeCourses.slice(0, 2).map((c: _TeacherCourse) => c.title).join(", ")
                   : instructor.title}
               </p>
             </div>
@@ -138,13 +143,13 @@ export default async function TeacherProfilePage({
             <h3 className="font-display text-xl font-bold text-ink">
               Courses by {instructor.name.split(" ")[0]}
             </h3>
-            {instructor.courses.length === 0 ? (
+            {activeCourses.length === 0 ? (
               <p className="rounded-3xl border border-dashed border-surface-muted bg-white p-6 text-sm text-ink-muted">
                 No courses are linked to this teacher yet.
               </p>
             ) : (
               <div className="space-y-4">
-                {instructor.courses.map((course: _TeacherCourse) => (
+                {activeCourses.map((course: _TeacherCourse) => (
                   <Link href={`/courses/${course.slug}`} key={course.id} className="block group">
                     <div className="flex items-center gap-4 rounded-3xl border border-surface-muted bg-white p-4 shadow-soft transition-colors group-hover:border-brand-300 group-hover:bg-brand-50/40">
                       <div className="relative w-16 h-16 rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
