@@ -101,7 +101,7 @@ export interface User {
   email?: string;
   phone?: string;
   avatar: string;
-  role: "student" | "instructor" | "admin";
+  role: "student" | "instructor" | "admin" | "superadmin";
   plan: "free" | "premium";
 }
 
@@ -153,6 +153,25 @@ export interface ExamCategory {
   accent: string; // tailwind gradient classes
 }
 
+/* ─── Blog types ────────────────────────────────────────────── */
+
+export interface Blog {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  subject: string;
+  featuredImage: string | null;
+  tags: string[];
+  published: boolean;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  authorInstructorId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /* ─── Admin management types ────────────────────────────────── */
 
 export interface AdminUser {
@@ -160,7 +179,7 @@ export interface AdminUser {
   name: string;
   email: string;
   phone: string;
-  role: "student" | "instructor" | "admin";
+  role: "student" | "instructor" | "admin" | "superadmin";
   isDisabled: boolean;
   createdAt: string;
   enrollmentCount: number;
@@ -174,6 +193,20 @@ export interface AdminInstructor {
   email: string;
   isDisabled: boolean;
   courseCount: number;
+  adminId?: string | null;
+  adminName?: string | null;
+}
+
+/** Admin accounts listed for the superadmin (managed, enable/disable). */
+export interface AdminAccount {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: "admin";
+  isDisabled: boolean;
+  createdAt: string;
+  instructorCount: number;
 }
 
 export interface AdminCourse {

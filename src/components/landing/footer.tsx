@@ -2,18 +2,40 @@ import Link from "next/link";
 import { Facebook, Instagram, Linkedin, Twitter, Youtube } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 
-const COLUMNS = [
+interface FooterLink {
+  label: string;
+  href: string;
+}
+
+const COLUMNS: { title: string; links: FooterLink[] }[] = [
   {
     title: "Exams",
-    links: ["GATE", "Placements", "PSU Exams", "Core Engineering", "EE Skills"],
+    links: [
+      { label: "GATE", href: "#" },
+      { label: "Placements", href: "#" },
+      { label: "PSU Exams", href: "#" },
+      { label: "Core Engineering", href: "#" },
+      { label: "EE Skills", href: "#" },
+    ],
   },
   {
     title: "Company",
-    links: ["About us", "Careers", "Blog", "Press", "Contact"],
+    links: [
+      { label: "About us", href: "#" },
+      { label: "Careers", href: "#" },
+      { label: "Blog", href: "/blogs" },
+      { label: "Press", href: "#" },
+      { label: "Contact", href: "#" },
+    ],
   },
   {
     title: "Support",
-    links: ["Help Center", "Refund Policy", "Terms of Service", "Privacy Policy"],
+    links: [
+      { label: "Help Center", href: "#" },
+      { label: "Refund Policy", href: "#" },
+      { label: "Terms of Service", href: "#" },
+      { label: "Privacy Policy", href: "#" },
+    ],
   },
 ];
 
@@ -49,12 +71,12 @@ export function Footer() {
               <h4 className="font-display text-sm font-semibold text-ink">{col.title}</h4>
               <ul className="mt-4 space-y-2.5">
                 {col.links.map((l) => (
-                  <li key={l}>
+                  <li key={l.label}>
                     <Link
-                      href="#"
+                      href={l.href}
                       className="text-sm text-ink-muted transition-colors hover:text-brand-700"
                     >
-                      {l}
+                      {l.label}
                     </Link>
                   </li>
                 ))}

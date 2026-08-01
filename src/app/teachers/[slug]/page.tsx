@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BookOpen, BriefcaseBusiness, GraduationCap, Users } from "lucide-react";
+import { ArrowRight, BookOpen, BriefcaseBusiness, FileText, GraduationCap, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { SiteHeader } from "@/components/landing/site-header";
@@ -38,6 +38,16 @@ export default async function TeacherProfilePage({
     where: { id: slug },
     include: {
       courses: true,
+      user: {
+        select: {
+          blogs: {
+            where: { published: true },
+            orderBy: { createdAt: "desc" },
+            take: 6,
+            select: { slug: true, title: true, subject: true, createdAt: true },
+          },
+        },
+      },
     },
   });
 
@@ -46,6 +56,7 @@ export default async function TeacherProfilePage({
   }
 
   const activeCourses = instructor.courses.filter((c) => !c.disabled);
+  const blogs = instructor.user?.blogs ?? [];
 
   return (
     <main className="min-h-screen bg-surface-subtle">
@@ -134,6 +145,40 @@ export default async function TeacherProfilePage({
               <ProfileSection title="Experience" icon={BriefcaseBusiness}>
                 <div className="whitespace-pre-wrap text-sm leading-7 text-ink-soft">
                   {instructor.experience}
+                </div>
+              </ProfileSection>
+            )}
+
+            {/* Blog posts */}
+            {blogs.length > 0 && (
+              <ProfileSection title={`Blogs by ${instructor.name.split(" ")[0]}`} icon={FileText}>
+                <div className="space-y-3">
+                  {blogs.map((b) => (
+                    <Link
+                      key={b.slug}
+                      href={`/blogs/${b.slug}`}
+                      className="block rounded-2xl border border-surface-muted bg-surface-subtle/60 p-4 transition-colors group hover:border-brand-300 hover:bg-brand-50/40"
+                    >
+                      <h3 className="line-clamp-2 font-semibold text-ink transition-colors group-hover:text-brand-700">
+                        {b.title}
+                      </h3>
+                      <p className="mt-1.5 text-xs font-medium capitalize text-ink-muted">
+                        {b.subject.replace(/-/g, " ")}
+                        <span className="mx-1.5">·</span>
+                        {b.createdAt.toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </Link>
+                  ))}
+                  <Link
+                    href="/blogs"
+                    className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-800"
+                  >
+                    View all blogs <ArrowRight size={15} />
+                  </Link>
                 </div>
               </ProfileSection>
             )}

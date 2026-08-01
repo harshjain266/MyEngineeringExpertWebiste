@@ -53,7 +53,7 @@ export function ExamCategories() {
               </div>
 
               <span className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700">
-                Explore category
+                View courses
                 <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
               </span>
             </motion.a>

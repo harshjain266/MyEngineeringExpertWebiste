@@ -1,12 +1,14 @@
 import "server-only";
 
+import type { Prisma } from "@prisma/client";
 import * as mock from "@/lib/mock-data";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { isSuperAdmin } from "@/lib/roles";
 import { PROGRAMS, PROGRAM_BY_SLUG } from "@/config/programs";
 import type { 
   Course, EnrolledCourse, LiveClass, LearningStats, Program, Announcement,
-  AdminUser, AdminInstructor, AdminCourse 
+  AdminUser, AdminInstructor, AdminCourse, AdminAccount, User 
 } from "@/types";
 
 /**
@@ -356,6 +358,29 @@ export async function getOrders() {
 
 /* ─── Admin queries ─────────────────────────────────────────── */
 
+/**
+ * Scope builders for the admin area.
+ *
+ * - superadmin sees the whole platform.
+ * - admin sees ALL users and ALL courses platform-wide, but only manages the
+ *   teachers assigned to them (`Instructor.adminId === currentUser.id`).
+ */
+function adminInstructorScope(user: User): Prisma.InstructorWhereInput {
+  return isSuperAdmin(user) ? {} : { adminId: user.id };
+}
+
+async function adminOrderScope(user: User): Promise<Prisma.OrderWhereInput> {
+  if (isSuperAdmin(user)) return { status: "Success" };
+  const courseIds = await prisma.course.findMany({
+    where: { instructor: { adminId: user.id } },
+    select: { id: true },
+  });
+  return {
+    status: "Success",
+    courseId: { in: courseIds.map((c) => c.id) },
+  };
+}
+
 export async function getAdminUsers(): Promise<AdminUser[]> {
   const users = await prisma.user.findMany({
     where: { role: "student" },
@@ -376,11 +401,13 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
   }));
 }
 
-export async function getAdminInstructors(): Promise<AdminInstructor[]> {
+export async function getAdminInstructors(user: User): Promise<AdminInstructor[]> {
   const instructors = await prisma.instructor.findMany({
+    where: adminInstructorScope(user),
     orderBy: { name: "asc" },
     include: {
       user: { select: { isDisabled: true, email: true } },
+      admin: { select: { name: true } },
       _count: { select: { courses: true } },
     },
   });
@@ -392,6 +419,8 @@ export async function getAdminInstructors(): Promise<AdminInstructor[]> {
     email: (i as any).user?.email ?? "",
     isDisabled: (i as any).user?.isDisabled ?? false,
     courseCount: (i as any)._count.courses,
+    adminId: (i as any).adminId ?? null,
+    adminName: (i as any).admin?.name ?? null,
   }));
 }
 
@@ -413,5 +442,101 @@ export async function getAdminCourses(): Promise<AdminCourse[]> {
     instructorName: (c as any).instructor.name,
     enrollmentCount: (c as any)._count.enrollments,
     createdAt: (c as any).createdAt.toISOString(),
+  }));
+}
+
+/** Admin accounts (role=admin) for the superadmin to manage. */
+export async function getAdminAccounts(): Promise<AdminAccount[]> {
+  const admins = await prisma.user.findMany({
+    where: { role: "admin" },
+    orderBy: { createdAt: "asc" },
+    include: { _count: { select: { managedInstructors: true } } },
+  });
+  return admins.map((a: Record<string, unknown>) => ({
+    id: (a as any).id,
+    name: (a as any).name,
+    email: (a as any).email ?? "",
+    phone: (a as any).phone ?? "",
+    role: "admin" as const,
+    isDisabled: (a as any).isDisabled,
+    createdAt: (a as any).createdAt.toISOString(),
+    instructorCount: (a as any)._count.managedInstructors,
+  }));
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalInstructors: number;
+  totalCourses: number;
+  totalOrders: number;
+  totalRevenue: number;
+}
+
+export async function getAdminStats(user: User): Promise<AdminStats> {
+  const [totalUsers, totalInstructors, totalCourses, orderAgg] = await Promise.all([
+    prisma.user.count({ where: { role: "student" } }),
+    prisma.instructor.count({ where: adminInstructorScope(user) }),
+    prisma.course.count(),
+    prisma.order.aggregate({
+      where: await adminOrderScope(user),
+      _sum: { amount: true },
+      _count: true,
+    }),
+  ]);
+
+  return {
+    totalUsers,
+    totalInstructors,
+    totalCourses,
+    totalOrders: orderAgg._count,
+    totalRevenue: orderAgg._sum.amount || 0,
+  };
+}
+
+export async function getAdminMonthlyRevenue(user: User) {
+  const orders = await prisma.order.findMany({
+    where: await adminOrderScope(user),
+    select: { amount: true, createdAt: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const monthlyMap: Record<string, number> = {};
+  for (const order of orders) {
+    const key = order.createdAt.toISOString().slice(0, 7);
+    monthlyMap[key] = (monthlyMap[key] || 0) + order.amount;
+  }
+  return Object.entries(monthlyMap)
+    .map(([month, revenue]) => ({ month, revenue }))
+    .slice(-6);
+}
+
+export async function getAdminRecentOrders(user: User, take = 5) {
+  const orders = await prisma.order.findMany({
+    where: await adminOrderScope(user),
+    orderBy: { createdAt: "desc" },
+    take,
+    include: { user: true },
+  });
+  return orders.map((o: Record<string, unknown>) => ({
+    id: (o as any).id,
+    course: (o as any).course,
+    amount: (o as any).amount,
+    createdAt: (o as any).createdAt.toISOString(),
+    userName: (o as any).user.name,
+    userEmail: (o as any).user.email,
+  }));
+}
+
+export async function getAdminRecentUsers(take = 5) {
+  const users = await prisma.user.findMany({
+    where: { role: "student" },
+    orderBy: { createdAt: "desc" },
+    take,
+  });
+  return users.map((u: Record<string, unknown>) => ({
+    id: (u as any).id,
+    name: (u as any).name,
+    email: (u as any).email ?? null,
+    createdAt: (u as any).createdAt.toISOString(),
   }));
 }

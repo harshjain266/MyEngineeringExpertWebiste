@@ -39,6 +39,7 @@ export interface MenuGroup {
 const QUICK_LINKS = [
   { label: "Live Classes", href: "/#features" },
   { label: "EE Skills", href: "/#features" },
+  { label: "Blogs", href: "/blogs" },
 ];
 
 export function Navbar({ menu }: { menu: MenuGroup[] }) {

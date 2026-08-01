@@ -11,10 +11,13 @@ import {
 } from "lucide-react";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { Badge } from "@/components/ui/badge";
+import { AdminAccountsTable } from "@/components/admin/admin-accounts-table";
+import { AssignTeacher } from "@/components/admin/assign-teacher";
+import { BulkAssignBar } from "@/components/admin/bulk-assign-bar";
 import { cn, formatINR, formatDate } from "@/lib/utils";
-import type { AdminUser, AdminInstructor, AdminCourse } from "@/types";
+import type { AdminUser, AdminInstructor, AdminCourse, AdminAccount } from "@/types";
 
-type Tab = "overview" | "users" | "instructors" | "courses" | "orders";
+type Tab = "overview" | "users" | "instructors" | "courses" | "orders" | "admins";
 
 interface Stats {
   totalUsers: number;
@@ -53,6 +56,8 @@ interface Props {
   courses: AdminCourse[];
   recentUsers: RecentUser[];
   recentOrders: RecentOrder[];
+  admins: AdminAccount[];
+  isSuperAdmin: boolean;
 }
 
 const container = {
@@ -65,7 +70,7 @@ const itemAnim = {
   show: { opacity: 1, y: 0 },
 };
 
-const tabs: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
+const baseTabs: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
   { key: "overview", label: "Overview", icon: BarChart3 },
   { key: "users", label: "Users", icon: Users },
   { key: "instructors", label: "Instructors", icon: GraduationCap },
@@ -81,13 +86,23 @@ function AdminContent(props: Props) {
   const [localUsers, setLocalUsers] = useState(props.users);
   const [localInstructors, setLocalInstructors] = useState(props.instructors);
   const [localCourses, setLocalCourses] = useState(props.courses);
+  const [localAdmins, setLocalAdmins] = useState(props.admins);
   const [search, setSearch] = useState("");
 
   const [toggleLoading, setToggleLoading] = useState<Set<string>>(new Set());
   const [promoteLoading, setPromoteLoading] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const tabs = [
+    ...baseTabs,
+    ...(props.isSuperAdmin
+      ? [{ key: "admins" as Tab, label: "Admins", icon: ShieldCheck }]
+      : []),
+  ];
 
   const setTab = useCallback(
     (t: Tab) => {
+      setSelectedIds(new Set());
       const params = new URLSearchParams(searchParams.toString());
       if (t === "overview") {
         params.delete("tab");
@@ -130,6 +145,8 @@ function AdminContent(props: Props) {
               email: data.user.email,
               isDisabled: data.user.isDisabled,
               courseCount: 0,
+              adminId: data.instructor.adminId ?? null,
+              adminName: data.instructor.adminName ?? null,
             },
             ...prev,
           ]);
@@ -169,7 +186,7 @@ function AdminContent(props: Props) {
   );
 
   const handleToggle = useCallback(
-    async (type: "user" | "instructor" | "course", id: string, disabled: boolean) => {
+    async (type: "user" | "instructor" | "course" | "admin", id: string, disabled: boolean) => {
       const key = `${type}-${id}`;
       setToggleLoading((prev) => new Set(prev).add(key));
 
@@ -180,7 +197,10 @@ function AdminContent(props: Props) {
           body: JSON.stringify({ type, id, disabled }),
         });
 
-        if (!res.ok) throw new Error("Failed");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Failed");
+        }
 
         if (type === "user") {
           setLocalUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isDisabled: disabled } : u)));
@@ -188,9 +208,11 @@ function AdminContent(props: Props) {
           setLocalInstructors((prev) => prev.map((i) => (i.id === id ? { ...i, isDisabled: disabled } : i)));
         } else if (type === "course") {
           setLocalCourses((prev) => prev.map((c) => (c.id === id ? { ...c, disabled } : c)));
+        } else if (type === "admin") {
+          setLocalAdmins((prev) => prev.map((a) => (a.id === id ? { ...a, isDisabled: disabled } : a)));
         }
-      } catch {
-        alert("Failed to update status");
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Failed to update status");
       } finally {
         setToggleLoading((prev) => {
           const next = new Set(prev);
@@ -201,6 +223,74 @@ function AdminContent(props: Props) {
     },
     [],
   );
+
+  const applyAssignment = useCallback(
+    async (ids: string[], adminId: string | null) => {
+      const res = await fetch("/api/admin/assign-instructor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instructorIds: ids, adminId }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Assign failed");
+      }
+      const admin = adminId ? localAdmins.find((a) => a.id === adminId) : undefined;
+      const idSet = new Set(ids);
+      setLocalInstructors((prev) =>
+        prev.map((i) =>
+          idSet.has(i.id) ? { ...i, adminId, adminName: admin?.name ?? null } : i,
+        ),
+      );
+    },
+    [localAdmins],
+  );
+
+  const handleAssign = useCallback(
+    async (instructorId: string, adminId: string | null) => {
+      try {
+        await applyAssignment([instructorId], adminId);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Failed to assign teacher");
+      }
+    },
+    [applyAssignment],
+  );
+
+  const handleBulkAssign = useCallback(
+    async (adminId: string | null) => {
+      const ids = Array.from(selectedIds);
+      if (ids.length === 0) return;
+      try {
+        await applyAssignment(ids, adminId);
+        setSelectedIds(new Set());
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Failed to assign teachers");
+      }
+    },
+    [applyAssignment, selectedIds],
+  );
+
+  const handleToggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback((ids: string[]) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const allSelected = ids.length > 0 && ids.every((id) => next.has(id));
+      ids.forEach((id) => {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      });
+      return next;
+    });
+  }, []);
 
   const statCards = [
     {
@@ -274,6 +364,7 @@ function AdminContent(props: Props) {
                 {tab === "instructors" && "Manage Instructors"}
                 {tab === "courses" && "Manage Courses"}
                 {tab === "orders" && "Order Management"}
+                {tab === "admins" && "Manage Admins"}
               </h1>
               <p className="mt-1 text-sm text-white/80">
                 {tab === "overview" && "Monitor students, sales, orders, and platform activity."}
@@ -281,6 +372,7 @@ function AdminContent(props: Props) {
                 {tab === "instructors" && "Manage instructor access and visibility."}
                 {tab === "courses" && "Show or hide courses from the platform."}
                 {tab === "orders" && "View all successful orders and revenue data."}
+                {tab === "admins" && "Enable or disable admin accounts."}
               </p>
             </div>
           </div>
@@ -323,6 +415,8 @@ function AdminContent(props: Props) {
               recentOrders={props.recentOrders}
               recentUsers={props.recentUsers}
               formatMonth={formatMonth}
+              isSuperAdmin={props.isSuperAdmin}
+              instructorCount={props.instructors.length}
             />
           )}
           {tab === "users" && (
@@ -380,11 +474,28 @@ function AdminContent(props: Props) {
               type="instructor"
               onToggle={handleToggle}
               toggleLoading={toggleLoading}
+              selectable={props.isSuperAdmin}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onSelectAll={handleSelectAll}
+              toolbar={
+                props.isSuperAdmin && selectedIds.size > 0 ? (
+                  <BulkAssignBar
+                    count={selectedIds.size}
+                    admins={localAdmins}
+                    onApply={handleBulkAssign}
+                    onClear={() => setSelectedIds(new Set())}
+                  />
+                ) : undefined
+              }
               renderMeta={(i: AdminInstructor) => (
                 <>
                   <span className="flex items-center gap-1"><BadgeCheck size={11} /> {i.title}</span>
                   {i.email && <span className="flex items-center gap-1"><Mail size={11} /> {i.email}</span>}
                   <span className="flex items-center gap-1"><BookOpen size={11} /> {i.courseCount} courses</span>
+                  {props.isSuperAdmin && i.adminName && (
+                    <span className="flex items-center gap-1"><ShieldCheck size={11} /> {i.adminName}</span>
+                  )}
                 </>
               )}
               filterFn={(i: AdminInstructor, q: string) =>
@@ -401,19 +512,29 @@ function AdminContent(props: Props) {
               extraActions={(i: AdminInstructor) => {
                 const isLoading = promoteLoading.has(`demote-${i.id}`);
                 return (
-                  <button
-                    onClick={() => handlePromote(i.userId ?? i.id, "demote")}
-                    disabled={isLoading}
-                    title="Demote to Student"
-                    className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-all hover:bg-rose-100 disabled:opacity-50"
-                  >
-                    {isLoading ? (
-                      <div className="h-3 w-3 animate-spin rounded-full border-2 border-rose-700 border-t-transparent" />
-                    ) : (
-                      <UserMinus size={12} />
+                  <>
+                    {props.isSuperAdmin && (
+                      <AssignTeacher
+                        instructorId={i.id}
+                        currentAdminId={i.adminId}
+                        admins={localAdmins}
+                        onAssigned={handleAssign}
+                      />
                     )}
-                    Demote
-                  </button>
+                    <button
+                      onClick={() => handlePromote(i.userId ?? i.id, "demote")}
+                      disabled={isLoading}
+                      title="Demote to Student"
+                      className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-all hover:bg-rose-100 disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-rose-700 border-t-transparent" />
+                      ) : (
+                        <UserMinus size={12} />
+                      )}
+                      Demote
+                    </button>
+                  </>
                 );
               }}
             />
@@ -450,6 +571,13 @@ function AdminContent(props: Props) {
           {tab === "orders" && (
             <OrdersTab recentOrders={props.recentOrders} />
           )}
+          {tab === "admins" && (
+            <AdminAccountsTable
+              admins={localAdmins}
+              onToggle={(id, disabled) => handleToggle("admin", id, disabled)}
+              toggleLoading={toggleLoading}
+            />
+          )}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -478,17 +606,35 @@ function OverviewTab({
   recentOrders,
   recentUsers,
   formatMonth,
+  isSuperAdmin,
+  instructorCount,
 }: {
   statCards: { label: string; value: string; icon: any; color: string; bg: string }[];
   monthlyRevenue: MonthlyRevenue[];
   recentOrders: RecentOrder[];
   recentUsers: RecentUser[];
   formatMonth: (iso: string) => string;
+  isSuperAdmin: boolean;
+  instructorCount: number;
 }) {
   const maxRevenue = Math.max(...monthlyRevenue.map((d) => d.revenue), 1);
 
   return (
     <div className="space-y-8">
+      {/* Empty-state onboarding for admins with no assigned teachers */}
+      {!isSuperAdmin && instructorCount === 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+          <div>
+            <p className="text-sm font-bold text-ink">No teachers assigned yet</p>
+            <p className="mt-0.5 text-xs text-ink-soft">
+              Your dashboard shows only the teachers assigned to you and their students. Ask the
+              superadmin to assign teachers to your account, or promote a student to a teacher —
+              that teacher will automatically come under your management.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {statCards.map((s) => (
@@ -715,6 +861,11 @@ function ManageSection<T extends { id: string }>({
   activeLabel,
   colorClass,
   extraActions,
+  selectable,
+  selectedIds,
+  onToggleSelect,
+  onSelectAll,
+  toolbar,
 }: {
   data: T[];
   search: string;
@@ -731,11 +882,21 @@ function ManageSection<T extends { id: string }>({
   activeLabel: string;
   colorClass: (disabled: boolean) => string;
   extraActions?: (item: T) => React.ReactNode;
+  selectable?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onSelectAll?: (ids: string[]) => void;
+  toolbar?: React.ReactNode;
 }) {
   const isDisabledField = (item: T): boolean =>
     "isDisabled" in item ? (item as any).isDisabled : (item as any).disabled;
 
   const filtered = data.filter((item) => filterFn(item, search.toLowerCase()));
+
+  const isAllSelected =
+    !!selectable &&
+    filtered.length > 0 &&
+    filtered.every((item) => selectedIds?.has(item.id));
 
   return (
     <div className="space-y-6">
@@ -750,15 +911,30 @@ function ManageSection<T extends { id: string }>({
         />
       </div>
 
+      {toolbar}
+
       <div className="overflow-hidden rounded-3xl border border-surface-muted bg-white shadow-soft">
-        <div className="border-b border-surface-muted bg-surface-subtle px-6 py-4">
+        <div className="flex items-center justify-between border-b border-surface-muted bg-surface-subtle px-6 py-4">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
             <Icon size={18} className="text-brand-600" />
             {title}
-            <span className="ml-auto rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-semibold text-ink-muted">
+          </h2>
+          <div className="flex items-center gap-3">
+            {selectable && filtered.length > 0 && onSelectAll && (
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-ink-muted">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={() => onSelectAll(filtered.map((item) => item.id))}
+                  className="h-4 w-4 accent-brand-600"
+                />
+                Select all
+              </label>
+            )}
+            <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-semibold text-ink-muted">
               {filtered.length} / {data.length}
             </span>
-          </h2>
+          </div>
         </div>
         <motion.div className="divide-y divide-surface-muted" variants={container} initial="hidden" animate="show">
           {filtered.length === 0 ? (
@@ -767,14 +943,23 @@ function ManageSection<T extends { id: string }>({
             filtered.map((entry) => {
               const disabled = isDisabledField(entry);
               const isLoading = toggleLoading.has(`${type}-${entry.id}`);
+              const isSelected = !!selectedIds?.has(entry.id);
               return (
                 <motion.div
                   key={entry.id}
                   variants={itemAnim}
                   layout
-                  className="flex flex-wrap items-center justify-between gap-3 px-6 py-4"
+                  className={`flex flex-wrap items-center justify-between gap-3 px-6 py-4 transition-colors ${isSelected ? "bg-brand-50/60" : ""}`}
                 >
                   <div className="flex min-w-0 items-center gap-3">
+                    {selectable && (
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => onToggleSelect?.(entry.id)}
+                        className="h-4 w-4 shrink-0 accent-brand-600"
+                      />
+                    )}
                     <div
                       className={cn(
                         "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-bold",

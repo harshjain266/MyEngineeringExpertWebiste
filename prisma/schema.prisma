@@ -26,6 +26,8 @@ model User {
   progress                LessonProgress[]
   orders                  Order[]
   wishlist                Wishlist[]
+  blogs                   Blog[]
+  managedInstructors      Instructor[]              @relation("ManagedInstructors")
 }
 
 model EmailVerificationToken {
@@ -53,6 +55,10 @@ model Instructor {
   courses        Course[]
   user           User?       @relation(fields: [userId], references: [id])
   liveClasses    LiveClass[]
+  adminId        String?
+  admin          User?       @relation("ManagedInstructors", fields: [adminId], references: [id])
+
+  @@index([adminId])
 }
 
 model Course {
@@ -177,10 +183,29 @@ model Announcement {
   date  DateTime @default(now())
 }
 
+model Blog {
+  id            String     @id @default(uuid())
+  title         String
+  slug          String     @unique
+  content       String
+  subject       String
+  featuredImage String?
+  tags          String[]
+  published     Boolean    @default(false)
+  authorId      String
+  author        User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([subject])
+  @@index([published, createdAt])
+}
+
 enum Role {
   student
   instructor
   admin
+  superadmin
 }
 
 enum Plan {

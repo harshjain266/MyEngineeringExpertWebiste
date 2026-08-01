@@ -17,17 +17,23 @@ import {
   BadgeCheck,
   ArrowUpDown,
   UserMinus,
+  Building2,
 } from "lucide-react";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import { AdminAccountsTable } from "@/components/admin/admin-accounts-table";
+import { AssignTeacher } from "@/components/admin/assign-teacher";
+import { BulkAssignBar } from "@/components/admin/bulk-assign-bar";
 import { cn, formatDate } from "@/lib/utils";
-import type { AdminUser, AdminInstructor, AdminCourse } from "@/types";
+import type { AdminUser, AdminInstructor, AdminCourse, AdminAccount } from "@/types";
 
-type Tab = "users" | "instructors" | "courses";
+type Tab = "users" | "instructors" | "courses" | "admins";
 
 interface Props {
   users: AdminUser[];
   instructors: AdminInstructor[];
   courses: AdminCourse[];
+  admins: AdminAccount[];
+  isSuperAdmin: boolean;
 }
 
 const container = {
@@ -40,19 +46,33 @@ const itemAnim = {
   show: { opacity: 1, y: 0 },
 };
 
-export function AdminManageClient({ users: initialUsers, instructors: initialInstructors, courses: initialCourses }: Props) {
+export function AdminManageClient({
+  users: initialUsers,
+  instructors: initialInstructors,
+  courses: initialCourses,
+  admins: initialAdmins,
+  isSuperAdmin,
+}: Props) {
   const [tab, setTab] = useState<Tab>("users");
   const [search, setSearch] = useState("");
 
   const [localUsers, setLocalUsers] = useState(initialUsers);
   const [localInstructors, setLocalInstructors] = useState(initialInstructors);
   const [localCourses, setLocalCourses] = useState(initialCourses);
+  const [localAdmins, setLocalAdmins] = useState(initialAdmins);
 
   const [toggleLoading, setToggleLoading] = useState<Set<string>>(new Set());
   const [promoteLoading, setPromoteLoading] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const switchTab = useCallback((next: Tab) => {
+    setTab(next);
+    setSearch("");
+    setSelectedIds(new Set());
+  }, []);
 
   const handleToggle = useCallback(
-    async (type: "user" | "instructor" | "course", id: string, disabled: boolean) => {
+    async (type: "user" | "instructor" | "course" | "admin", id: string, disabled: boolean) => {
       const key = `${type}-${id}`;
       setToggleLoading((prev) => new Set(prev).add(key));
       console.log(`[Manage] Toggle ${type} ${id} -> disabled=${disabled}`);
@@ -64,7 +84,10 @@ export function AdminManageClient({ users: initialUsers, instructors: initialIns
           body: JSON.stringify({ type, id, disabled }),
         });
 
-        if (!res.ok) throw new Error("Toggle failed");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Toggle failed");
+        }
 
         if (type === "user") {
           setLocalUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isDisabled: disabled } : u)));
@@ -72,11 +95,13 @@ export function AdminManageClient({ users: initialUsers, instructors: initialIns
           setLocalInstructors((prev) => prev.map((i) => (i.id === id ? { ...i, isDisabled: disabled } : i)));
         } else if (type === "course") {
           setLocalCourses((prev) => prev.map((c) => (c.id === id ? { ...c, disabled } : c)));
+        } else if (type === "admin") {
+          setLocalAdmins((prev) => prev.map((a) => (a.id === id ? { ...a, isDisabled: disabled } : a)));
         }
         console.log(`[Manage] Toggle ${type} ${id} -> success`);
       } catch (err) {
         console.error(`[Manage] Toggle ${type} ${id} failed:`, err);
-        alert("Failed to update status");
+        alert(err instanceof Error ? err.message : "Failed to update status");
       } finally {
         setToggleLoading((prev) => {
           const next = new Set(prev);
@@ -118,6 +143,8 @@ export function AdminManageClient({ users: initialUsers, instructors: initialIns
               email: data.user.email,
               isDisabled: data.user.isDisabled,
               courseCount: 0,
+              adminId: data.instructor.adminId ?? null,
+              adminName: data.instructor.adminName ?? null,
             },
             ...prev,
           ]);
@@ -156,10 +183,81 @@ export function AdminManageClient({ users: initialUsers, instructors: initialIns
     [localInstructors, localUsers],
   );
 
+  const applyAssignment = useCallback(
+    async (ids: string[], adminId: string | null) => {
+      const res = await fetch("/api/admin/assign-instructor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instructorIds: ids, adminId }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Assign failed");
+      }
+      const admin = adminId ? localAdmins.find((a) => a.id === adminId) : undefined;
+      const idSet = new Set(ids);
+      setLocalInstructors((prev) =>
+        prev.map((i) =>
+          idSet.has(i.id) ? { ...i, adminId, adminName: admin?.name ?? null } : i,
+        ),
+      );
+    },
+    [localAdmins],
+  );
+
+  const handleAssign = useCallback(
+    async (instructorId: string, adminId: string | null) => {
+      try {
+        await applyAssignment([instructorId], adminId);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Failed to assign teacher");
+      }
+    },
+    [applyAssignment],
+  );
+
+  const handleBulkAssign = useCallback(
+    async (adminId: string | null) => {
+      const ids = Array.from(selectedIds);
+      if (ids.length === 0) return;
+      try {
+        await applyAssignment(ids, adminId);
+        setSelectedIds(new Set());
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Failed to assign teachers");
+      }
+    },
+    [applyAssignment, selectedIds],
+  );
+
+  const handleToggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback((ids: string[]) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const allSelected = ids.length > 0 && ids.every((id) => next.has(id));
+      ids.forEach((id) => {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      });
+      return next;
+    });
+  }, []);
+
   const tabs: { key: Tab; label: string; icon: typeof Users; count: number }[] = [
     { key: "users", label: "Users", icon: Users, count: localUsers.length },
     { key: "instructors", label: "Instructors", icon: GraduationCap, count: localInstructors.length },
     { key: "courses", label: "Courses", icon: BookOpen, count: localCourses.length },
+    ...(isSuperAdmin
+      ? [{ key: "admins" as Tab, label: "Admins", icon: ShieldCheck, count: localAdmins.length }]
+      : []),
   ];
 
   return (
@@ -189,7 +287,7 @@ export function AdminManageClient({ users: initialUsers, instructors: initialIns
         {tabs.map((t) => (
           <button
             key={t.key}
-            onClick={() => { setTab(t.key); setSearch(""); }}
+            onClick={() => switchTab(t.key)}
             className={cn(
               "flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all",
               tab === t.key
@@ -249,6 +347,14 @@ export function AdminManageClient({ users: initialUsers, instructors: initialIns
               onDemote={handlePromote}
               toggleLoading={toggleLoading}
               promoteLoading={promoteLoading}
+              admins={localAdmins}
+              isSuperAdmin={isSuperAdmin}
+              onAssign={handleAssign}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onSelectAll={handleSelectAll}
+              onBulkAssign={handleBulkAssign}
+              onClearSelection={() => setSelectedIds(new Set())}
             />
           )}
           {tab === "courses" && (
@@ -256,6 +362,13 @@ export function AdminManageClient({ users: initialUsers, instructors: initialIns
               courses={localCourses}
               search={search}
               onToggle={handleToggle}
+              toggleLoading={toggleLoading}
+            />
+          )}
+          {tab === "admins" && (
+            <AdminAccountsTable
+              admins={localAdmins}
+              onToggle={(id, disabled) => handleToggle("admin", id, disabled)}
               toggleLoading={toggleLoading}
             />
           )}
@@ -380,13 +493,29 @@ function InstructorTable({
   onDemote,
   toggleLoading,
   promoteLoading,
+  admins,
+  isSuperAdmin,
+  onAssign,
+  selectedIds,
+  onToggleSelect,
+  onSelectAll,
+  onBulkAssign,
+  onClearSelection,
 }: {
   instructors: AdminInstructor[];
   search: string;
-  onToggle: (type: "user" | "instructor" | "course", id: string, disabled: boolean) => void;
+  onToggle: (type: "user" | "instructor" | "course" | "admin", id: string, disabled: boolean) => void;
   onDemote: (userId: string, action: "demote") => void;
   toggleLoading: Set<string>;
   promoteLoading: Set<string>;
+  admins: AdminAccount[];
+  isSuperAdmin: boolean;
+  onAssign: (instructorId: string, adminId: string | null) => void;
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
+  onSelectAll: (ids: string[]) => void;
+  onBulkAssign: (adminId: string | null) => Promise<void>;
+  onClearSelection: () => void;
 }) {
   const filtered = instructors.filter(
     (i) =>
@@ -395,41 +524,78 @@ function InstructorTable({
       i.email.toLowerCase().includes(search.toLowerCase()),
   );
 
+  const isAllSelected = filtered.length > 0 && filtered.every((i) => selectedIds.has(i.id));
+
   return (
-    <div className="overflow-hidden rounded-3xl border border-surface-muted bg-white shadow-soft">
-      <div className="border-b border-surface-muted bg-surface-subtle px-6 py-4">
-        <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <GraduationCap size={18} className="text-brand-600" />
-          Instructors
-        </h2>
-      </div>
-      <motion.div className="divide-y divide-surface-muted" variants={container} initial="hidden" animate="show">
-        {filtered.length === 0 ? (
-          <div className="p-12 text-center text-ink-muted">No instructors found.</div>
-        ) : (
-          filtered.map((i) => {
-            const isToggling = toggleLoading.has(`instructor-${i.id}`);
-            const isDemoting = promoteLoading.has(`demote-${i.id}`);
-            return (
-              <motion.div
-                key={i.id}
-                variants={itemAnim}
-                layout
-                className="flex flex-wrap items-center justify-between gap-3 px-6 py-4"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-bold",
-                    i.isDisabled ? "bg-rose-50 text-rose-400" : "bg-amber-50 text-amber-700",
-                  )}>
-                    {i.name[0]}
-                  </div>
+    <div className="space-y-4">
+      {isSuperAdmin && selectedIds.size > 0 && (
+        <BulkAssignBar
+          count={selectedIds.size}
+          admins={admins}
+          onApply={onBulkAssign}
+          onClear={onClearSelection}
+        />
+      )}
+
+      <div className="overflow-hidden rounded-3xl border border-surface-muted bg-white shadow-soft">
+        <div className="flex items-center justify-between border-b border-surface-muted bg-surface-subtle px-6 py-4">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+            <GraduationCap size={18} className="text-brand-600" />
+            Instructors
+          </h2>
+          {isSuperAdmin && filtered.length > 0 && (
+            <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-ink-muted">
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={() => onSelectAll(filtered.map((i) => i.id))}
+                className="h-4 w-4 accent-brand-600"
+              />
+              Select all
+            </label>
+          )}
+        </div>
+        <motion.div className="divide-y divide-surface-muted" variants={container} initial="hidden" animate="show">
+          {filtered.length === 0 ? (
+            <div className="p-12 text-center text-ink-muted">No instructors found.</div>
+          ) : (
+            filtered.map((i) => {
+              const isToggling = toggleLoading.has(`instructor-${i.id}`);
+              const isDemoting = promoteLoading.has(`demote-${i.id}`);
+              const isSelected = selectedIds.has(i.id);
+              return (
+                <motion.div
+                  key={i.id}
+                  variants={itemAnim}
+                  layout
+                  className={`flex flex-wrap items-center justify-between gap-3 px-6 py-4 transition-colors ${isSelected ? "bg-brand-50/60" : ""}`}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    {isSuperAdmin && (
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => onToggleSelect(i.id)}
+                        className="h-4 w-4 shrink-0 accent-brand-600"
+                      />
+                    )}
+                    <div className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-bold",
+                      i.isDisabled ? "bg-rose-50 text-rose-400" : "bg-amber-50 text-amber-700",
+                    )}>
+                      {i.name[0]}
+                    </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-bold text-ink">{i.name}</p>
                       {i.isDisabled && (
                         <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
                           Disabled
+                        </span>
+                      )}
+                      {isSuperAdmin && i.adminName && (
+                        <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-600">
+                          {i.adminName}
                         </span>
                       )}
                     </div>
@@ -441,6 +607,17 @@ function InstructorTable({
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {isSuperAdmin && (
+                    <div className="flex items-center gap-1.5 rounded-xl border border-surface-muted bg-surface-subtle px-2 py-1">
+                      <Building2 size={12} className="text-ink-muted" />
+                      <AssignTeacher
+                        instructorId={i.id}
+                        currentAdminId={i.adminId}
+                        admins={admins}
+                        onAssigned={onAssign}
+                      />
+                    </div>
+                  )}
                   <button
                     onClick={() => onDemote(i.userId ?? i.id, "demote")}
                     disabled={isDemoting}
@@ -472,7 +649,8 @@ function InstructorTable({
             );
           })
         )}
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }

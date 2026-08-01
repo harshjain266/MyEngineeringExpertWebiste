@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { canAccessAdmin } from "@/lib/roles";
 
 export async function POST(req: Request) {
   console.log("[API promote-role] POST received");
   try {
     const session = await getServerSession(authOptions);
-    if (!session || (session.user as any)?.role !== "admin") {
+    const actor = (session?.user as any) ?? null;
+    if (!canAccessAdmin(actor)) {
       console.warn("[API promote-role] Unauthorized attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -30,6 +32,10 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Only students can be promoted to instructor" }, { status: 400 });
       }
 
+      // Teachers promoted by an admin belong to that admin. Superadmin-created
+      // teachers start unassigned and can be handed over to an admin later.
+      const adminId = actor.role === "admin" ? actor.id : null;
+
       const result = await prisma.$transaction(async (tx) => {
         const updated = await tx.user.update({
           where: { id: userId },
@@ -40,7 +46,7 @@ export async function POST(req: Request) {
         if (instructor) {
           instructor = await tx.instructor.update({
             where: { id: instructor.id },
-            data: { name: user.name, title: "Instructor" },
+            data: { name: user.name, title: "Instructor", adminId },
           });
           console.log(`[API promote-role] Re-linked existing instructor record ${instructor.id}`);
         } else {
@@ -50,6 +56,7 @@ export async function POST(req: Request) {
               name: user.name,
               title: "Instructor",
               avatar: user.avatar,
+              adminId,
             },
           });
         }
@@ -71,6 +78,8 @@ export async function POST(req: Request) {
         },
         instructor: {
           id: result.instructor.id,
+          adminId: result.instructor.adminId,
+          adminName: result.instructor.adminId ? actor.name : null,
         },
       });
     }
@@ -87,6 +96,11 @@ export async function POST(req: Request) {
       });
 
       if (instructor) {
+        // Admins may only demote teachers they own.
+        if (actor.role === "admin" && instructor.adminId !== actor.id) {
+          throw new Error("This teacher is not under your management");
+        }
+
         if (instructor._count.courses > 0) {
           await tx.course.updateMany({
             where: { instructorId: instructor.id },
@@ -94,10 +108,10 @@ export async function POST(req: Request) {
           });
         }
 
-        // Unlink user from instructor record (don't delete — preserves courses/LiveClasses)
+        // Unlink user and clear ownership (don't delete — preserves courses/LiveClasses)
         await tx.instructor.update({
           where: { id: instructor.id },
-          data: { userId: null },
+          data: { userId: null, adminId: null },
         });
       }
 
@@ -110,7 +124,9 @@ export async function POST(req: Request) {
     console.log(`[API promote-role] User ${userId} demoted to student successfully`);
     return NextResponse.json({ ok: true });
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Internal error";
+    const status = message.includes("under your management") ? 403 : 500;
     console.error("[API promote-role] Error:", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return NextResponse.json({ error: message }, { status });
   }
 }

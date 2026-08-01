@@ -23,7 +23,7 @@ export function Hero() {
       <div className="container-px relative grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
         {/* Left copy */}
         <div>
-          <motion.span
+          {/* <motion.span
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -31,7 +31,7 @@ export function Hero() {
           >
             <Sparkles size={14} className="text-amber-300" />
             Preparing students for 35+ exam categories
-          </motion.span>
+          </motion.span> */}
 
           <motion.h1
             initial={{ opacity: 0, y: 22 }}
