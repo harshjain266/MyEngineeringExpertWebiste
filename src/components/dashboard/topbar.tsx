@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { Bell, ChevronDown, LogOut, Menu, MessageSquare, Search, Settings, ShoppingCart } from "lucide-react";
+import { Bell, ChevronDown, KeyRound, LogOut, Menu, MessageSquare, Search, Settings, ShoppingCart } from "lucide-react";
+import { ChangePasswordModal } from "@/components/auth/change-password-modal";
 import type { User } from "@/types";
 
 export function Topbar({ user, onMenu }: { user: User; onMenu: () => void }) {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -80,6 +82,16 @@ export function Topbar({ user, onMenu }: { user: User; onMenu: () => void }) {
               </Link>
               <button
                 type="button"
+                onClick={() => {
+                  setProfileOpen(false);
+                  setChangePasswordOpen(true);
+                }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-ink-soft transition-colors hover:bg-surface-muted hover:text-brand-700"
+              >
+                <KeyRound size={16} /> Change Password
+              </button>
+              <button
+                type="button"
                 onClick={() => signOut({ callbackUrl: "/" })}
                 className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50"
               >
@@ -89,6 +101,7 @@ export function Topbar({ user, onMenu }: { user: User; onMenu: () => void }) {
           ) : null}
         </div>
       </div>
+      <ChangePasswordModal open={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} />
     </header>
   );
 }

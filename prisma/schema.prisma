@@ -21,6 +21,7 @@ model User {
   phone                   String?                  @unique
   isDisabled              Boolean                  @default(false)
   emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
   enrollments             Enrollment[]
   instructor              Instructor?
   progress                LessonProgress[]
@@ -31,6 +32,17 @@ model User {
 }
 
 model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
   id        String   @id @default(uuid())
   token     String   @unique
   expiresAt DateTime

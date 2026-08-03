@@ -16,6 +16,7 @@ import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { portalHrefForRole } from "@/lib/role-routes";
+import Link from "next/link";
 
 interface OpenOptions {
   redirectTo?: string;
@@ -286,13 +287,22 @@ function AuthModalView(props: {
                   className="space-y-4"
                 >
                   <EmailInput value={email} onChange={onEmailChange} />
-                  <PasswordInput
-                    value={password}
-                    onChange={onPasswordChange}
-                    show={showPassword}
-                    onToggle={onTogglePassword}
-                    placeholder="Your password"
-                  />
+                  <div>
+                    <PasswordInput
+                      value={password}
+                      onChange={onPasswordChange}
+                      show={showPassword}
+                      onToggle={onTogglePassword}
+                      placeholder="Your password"
+                    />
+                    <Link
+                      href="/login?forgot=1"
+                      onClick={onClose}
+                      className="mt-2 inline-block text-sm font-medium text-brand-600 hover:text-brand-700"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
                   <Button type="submit" className="w-full" size="lg" disabled={loading}>
                     {loading ? <><Loader2 size={18} className="animate-spin" /> Signing in…</> : "Sign In"}
                   </Button>
@@ -309,10 +319,22 @@ function AuthModalView(props: {
                     onChange={onPasswordChange}
                     show={showPassword}
                     onToggle={onTogglePassword}
-                    placeholder="Min. 6 characters"
+                    placeholder="Your password"
                   />
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        window.location.assign("/login?forgot=1");
+                      }}
+                      className="text-sm font-semibold text-brand-700 hover:text-brand-600"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                    {loading ? <><Loader2 size={18} className="animate-spin" /> Creating account…</> : "Create Account"}
+                    {loading ? <><Loader2 size={18} className="animate-spin" /> Signing in…</> : "Sign In"}
                   </Button>
                 </form>
               )}
