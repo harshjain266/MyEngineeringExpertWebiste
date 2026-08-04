@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { getCurrentUser } from "@/lib/auth";
 
 const ALLOWED_TYPES = [
@@ -13,7 +11,7 @@ const ALLOWED_TYPES = [
   "image/tiff",
   "image/avif",
 ];
-const MAX_SIZE = 5 * 1024 * 1024;
+const MAX_SIZE = 4 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,22 +35,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (file.size > MAX_SIZE) {
-      return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
+      return NextResponse.json({ error: "File too large (max 4MB)" }, { status: 400 });
     }
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const ext = file.name.split(".").pop() || "jpg";
-    const filename = `${user.id}-${Date.now()}.${ext}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "avatars");
+    const dataUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
 
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(path.join(uploadDir, filename), buffer);
-
-    const url = `/uploads/avatars/${filename}`;
-
-    return NextResponse.json({ url });
+    return NextResponse.json({ url: dataUrl });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });

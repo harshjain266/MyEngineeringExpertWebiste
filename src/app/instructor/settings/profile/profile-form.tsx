@@ -30,16 +30,17 @@ export default function ProfileForm({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage({ type: "error", text: "File too large (max 5MB)." });
+    if (file.size > 4 * 1024 * 1024) {
+      setMessage({ type: "error", text: "File too large (max 4MB)." });
       return;
     }
 
     setUploading(true);
     setMessage(null);
 
+    const resized = await resizeImage(file);
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", resized, "avatar.jpg");
 
     try {
       const res = await fetch("/api/upload", { method: "POST", body: formData });
@@ -241,3 +242,36 @@ export default function ProfileForm({
 
 const inputClass =
   "w-full rounded-2xl border border-surface-muted bg-white px-4 py-3 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/70 focus:border-brand-300 focus:ring-4 focus:ring-brand-100";
+
+function resizeImage(file: File, maxSize = 512): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onerror = () => reject(new Error("Invalid image"));
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas not supported"));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(
+          (blob) =>
+            blob ? resolve(blob) : reject(new Error("Encoding failed")),
+          "image/jpeg",
+          0.85
+        );
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
