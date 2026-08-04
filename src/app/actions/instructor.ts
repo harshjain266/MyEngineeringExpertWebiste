@@ -52,6 +52,13 @@ export async function updateInstructorProfile(formData: FormData) {
     revalidatePath(`/teachers/${instructor.id}`);
     revalidatePath("/teachers");
 
+    if (avatar && avatar !== user.avatar) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { avatar },
+      });
+    }
+
     return { success: true, instructorId: instructor.id };
   } catch (error: any) {
     console.error("Failed to update instructor profile:", error);

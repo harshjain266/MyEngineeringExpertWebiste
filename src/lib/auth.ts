@@ -62,13 +62,26 @@ export const authOptions: NextAuthOptions = {
 
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role;
         token.name = user.name ?? "Student";
         token.picture = (user as any).avatar ?? null;
       }
+
+      if (trigger === "update") {
+        const fresh = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { name: true, avatar: true, email: true },
+        });
+        if (fresh) {
+          token.name = fresh.name;
+          token.picture =
+            fresh.avatar ?? DEFAULT_AVATAR(fresh.email ?? (token.id as string));
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {

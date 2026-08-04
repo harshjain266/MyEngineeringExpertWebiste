@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import { Upload, Link2, ImageIcon } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { updateInstructorProfile } from "@/app/actions/instructor";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ export default function ProfileForm({
   const [urlInput, setUrlInput] = useState("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { update: updateSession } = useSession();
 
   function importUrl() {
     const url = urlInput.trim();
@@ -73,6 +75,7 @@ export default function ProfileForm({
 
     if (result.success) {
       setMessage({ type: "success", text: "Profile updated successfully!" });
+      await updateSession();
     } else {
       setMessage({ type: "error", text: result.error || "Something went wrong." });
     }
