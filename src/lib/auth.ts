@@ -62,35 +62,27 @@ export const authOptions: NextAuthOptions = {
 
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role;
-        token.name = user.name ?? "Student";
-        token.picture = (user as any).avatar ?? null;
       }
-
-      if (trigger === "update") {
-        const fresh = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { name: true, avatar: true, email: true },
-        });
-        if (fresh) {
-          token.name = fresh.name;
-          token.picture =
-            fresh.avatar ?? DEFAULT_AVATAR(fresh.email ?? (token.id as string));
-        }
-      }
-
+      delete (token as any).picture;
+      delete (token as any).name;
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
+
+        const fresh = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { name: true, avatar: true, email: true },
+        });
+        session.user.name = fresh?.name ?? "Student";
         (session.user as any).avatar =
-          token.picture ?? DEFAULT_AVATAR(String(token.id ?? "user"));
-        session.user.name = (token.name as string) ?? "Student";
+          fresh?.avatar ?? DEFAULT_AVATAR(fresh?.email ?? String(token.id));
       }
       return session;
     },
@@ -100,6 +92,7 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
