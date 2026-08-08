@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BookOpen, Clock, User, Filter, ArrowRight } from "lucide-react";
+import { BookOpen, Clock, User, Filter } from "lucide-react";
+import { BackButton } from "@/components/ui/back-button";
 import type { Blog } from "@/types";
 
 const DEFAULT_SUBJECTS = [
@@ -27,7 +28,10 @@ export default function BlogsPageClient({ blogs, subjects }: Props) {
     <div className="min-h-screen bg-surface-subtle">
       {/* Header */}
       <section className="bg-white border-b border-surface-muted">
-        <div className="container-px py-16 text-center">
+        <div className="container-px pt-6">
+          <BackButton href="/dashboard">Back</BackButton>
+        </div>
+        <div className="container-px py-12 text-center">
           <span className="text-sm font-semibold uppercase tracking-wider text-brand-600">
             EngineeringExpert Blogs
           </span>

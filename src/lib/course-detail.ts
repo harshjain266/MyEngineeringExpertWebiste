@@ -11,20 +11,6 @@ const roundTo = (n: number, step = 100) => Math.round(n / step) * step;
 const fmtDate = (d: Date) =>
   d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
-/** Small deterministic co-faculty pool so each course shows a real teacher panel. */
-const CO_FACULTY = [
-  { name: "Saleem Ahmad Sir", avatar: "https://i.pravatar.cc/160?img=11" },
-  { name: "Rahul Yadav Sir", avatar: "https://i.pravatar.cc/160?img=13" },
-  { name: "Sachin Jakhar Sir", avatar: "https://i.pravatar.cc/160?img=14" },
-  { name: "Priya Nair Maam", avatar: "https://i.pravatar.cc/160?img=31" },
-];
-
-function hash(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h;
-}
-
 export function buildCourseDetail(course: Course): CourseDetail {
   const now = new Date();
   const start = new Date(now);
@@ -70,10 +56,7 @@ export function buildCourseDetail(course: Course): CourseDetail {
     },
   ];
 
-  // ── Teachers (lead + 2 co-faculty, deterministic) ───────────────────────
-  const h = hash(course.id || course.slug);
-  const co1 = CO_FACULTY[h % CO_FACULTY.length];
-  const co2 = CO_FACULTY[(((h >>> 3) % CO_FACULTY.length) + 1) % CO_FACULTY.length];
+  // ── Teachers (only the real instructor assigned to this course) ─────────
   const teachers: CourseDetail["teachers"] = [
     {
       name: course.instructor.name,
@@ -81,8 +64,6 @@ export function buildCourseDetail(course: Course): CourseDetail {
       exp: "12+ Years Exp",
       avatar: course.instructor.avatar,
     },
-    { name: co1.name, subject: course.category, exp: "10+ Years Exp", avatar: co1.avatar },
-    { name: co2.name, subject: course.category, exp: "8+ Years Exp", avatar: co2.avatar },
   ];
 
   // ── Schedule (lectures split across the teachers) ───────────────────────

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { BookOpen, Clock, PlayCircle, Signal } from "lucide-react";
 import type { Course } from "@/types";
@@ -25,6 +26,7 @@ export function ProgramCourseCard({
   index?: number;
 }) {
   const href = `/courses/${course.slug}`;
+  const pathname = usePathname();
   const theme = CATEGORY_THEME[course.category] ?? {
     gradient: "from-brand-600 to-indigo-800",
     chip: "bg-white/20 text-white",
@@ -64,7 +66,7 @@ export function ProgramCourseCard({
       <div className="flex flex-1 flex-col gap-3 p-4">
         {/* Instructor */}
         <Link
-          href={`/teachers/${course.instructor.id}`}
+          href={`/teachers/${course.instructor.id}?from=${encodeURIComponent(pathname)}`}
           className="flex items-center gap-2 rounded-lg transition-colors hover:text-brand-700"
         >
           <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-700">

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, Calendar, Clock, User } from "lucide-react";
+import { Calendar, Clock, User } from "lucide-react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
+import { BackButton } from "@/components/ui/back-button";
 
 export const dynamic = "force-dynamic";
 
@@ -27,13 +28,9 @@ export default async function PublicBlogDetailPage({
   return (
     <div className="min-h-screen bg-surface-subtle">
       <article className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
-        <Link
-          href="/blogs"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
-        >
-          <ArrowLeft size={16} />
+        <BackButton href="/blogs" className="mb-6">
           Back to Blogs
-        </Link>
+        </BackButton>
 
         <header className="mb-8">
           <span className="inline-block rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-700">

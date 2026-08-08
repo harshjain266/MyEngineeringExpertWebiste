@@ -7,6 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Program {
+  btech_bca
+  dsa
+  aptitude
+  gate
+  web_dev
+}
+
 model User {
   id                      String                   @id @default(uuid())
   name                    String                   @default("Student")
@@ -91,7 +99,7 @@ model Course {
   tags          String[]
   createdAt     DateTime     @default(now())
   instructorId  String
-  program       String       @default("btech-bca")
+  program       Program      @default(btech_bca)
   plannerUrl    String?
   popular       Boolean      @default(false)
   disabled      Boolean      @default(false)

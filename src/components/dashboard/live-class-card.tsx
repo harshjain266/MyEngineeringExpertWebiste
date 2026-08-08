@@ -4,6 +4,7 @@ import Image from "next/image";
 import { CalendarDays, Clock, Radio, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MasterClassBadge } from "@/components/ui/master-class-badge";
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-IN", {
@@ -31,7 +32,8 @@ export function LiveClassCard({ item, isLive }: { item: any; isLive?: boolean })
         <div className="absolute inset-0 flex items-center justify-center">
           <Radio size={48} className={isLive ? "text-rose-500 animate-pulse" : "text-brand-200"} />
         </div>
-        <div className="absolute left-3 top-3">
+        <div className="absolute left-3 top-3 flex items-center gap-2">
+          {!item.courseId && <MasterClassBadge />}
           {canJoin ? (
             <Badge variant="live" className="gap-1 rounded-none">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> LIVE

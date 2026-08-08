@@ -6,6 +6,7 @@ import { CalendarDays, Clock, Users, Video } from "lucide-react";
 import type { LiveClass } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MasterClassBadge } from "@/components/ui/master-class-badge";
 import { SectionHeader } from "@/components/dashboard/section-header";
 
 function formatTime(iso: string) {
@@ -65,6 +66,7 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
+              <MasterClassBadge />
               {featuredJoinable ? (
                 <Badge variant="live" className="gap-1 rounded-none">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> LIVE

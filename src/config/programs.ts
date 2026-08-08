@@ -9,7 +9,7 @@ import type { Program } from "@/types";
  */
 export const PROGRAMS: Program[] = [
   {
-    slug: "btech-bca",
+    slug: "btech_bca",
     name: "BTECH / BCA",
     group: "Degree Programs",
     blurb: "Semester-aligned courses for B.Tech & BCA students.",
@@ -45,7 +45,7 @@ export const PROGRAMS: Program[] = [
     accent: "from-rose-100 to-rose-50",
   },
   {
-    slug: "web-dev",
+    slug: "web_dev",
     name: "Web Development",
     group: "Skills",
     blurb: "Full-stack web development — frontend to backend.",

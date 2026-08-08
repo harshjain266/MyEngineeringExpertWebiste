@@ -214,6 +214,7 @@ export interface AdminCourse {
   slug: string;
   title: string;
   category: string;
+  program: string;
   price: number;
   disabled: boolean;
   instructorName: string;

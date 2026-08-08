@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Clock, PlayCircle } from "lucide-react";
 import type { Course } from "@/types";
@@ -10,6 +11,7 @@ import { BuyNowButton } from "./buy-now-button";
 import { formatINR } from "@/lib/utils";
 
 export function CourseCard({ course, index = 0 }: { course: Course; index?: number }) {
+  const pathname = usePathname();
   return (
     <motion.article
       initial={{ opacity: 0, y: 24 }}
@@ -43,7 +45,7 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
         </Link>
 
         <Link
-          href={`/teachers/${course.instructor.id}`}
+          href={`/teachers/${course.instructor.id}?from=${encodeURIComponent(pathname)}`}
           className="flex items-center gap-2 rounded-lg transition-colors hover:text-brand-700"
         >
           <Image

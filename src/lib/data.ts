@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Prisma } from "@prisma/client";
+import type { Program as DbProgram } from "@prisma/client";
 import * as mock from "@/lib/mock-data";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
@@ -93,9 +94,6 @@ export async function getDashboardData() {
     averageScore: 0,
   };
 
-  const enrolledCourseIds = enrolled.map((e) => e.course.id);
-
-  // Filter live classes for next 7 days
   const now = new Date();
   const nextWeek = new Date();
   nextWeek.setDate(now.getDate() + 7);
@@ -103,20 +101,11 @@ export async function getDashboardData() {
   const [liveClasses, recommended, announcements] = await Promise.all([
     prisma.liveClass.findMany({
       where: {
-        AND: [
-          {
-            OR: [
-              { courseId: null },
-              { courseId: { in: enrolledCourseIds } },
-            ],
-          },
-          {
-            startsAt: {
-              gte: now,
-              lte: nextWeek,
-            },
-          },
-        ],
+        courseId: null,
+        startsAt: {
+          gte: now,
+          lte: nextWeek,
+        },
       },
       include: { instructor: true },
       orderBy: { startsAt: 'asc' },
@@ -202,7 +191,7 @@ export async function getProgramBySlug(slug: string): Promise<Program | undefine
 
 export async function getCoursesByProgram(programSlug: string): Promise<Course[]> {
   const dbCourses = await prisma.course.findMany({
-    where: { program: programSlug, disabled: false },
+    where: { program: programSlug as DbProgram, disabled: false },
     include: { 
       instructor: true,
       _count: {
@@ -295,31 +284,13 @@ export async function getLiveClassesByCourse(courseId: string): Promise<LiveClas
 }
 
 export async function getAllLiveClasses(): Promise<LiveClass[]> {
-  const user = await getCurrentUser();
-
-  // Build course filter: show general classes (courseId=null) + classes for enrolled courses
-  let courseFilter: object = { courseId: null };
-  if (user) {
-    const enrollments = await prisma.enrollment.findMany({
-      where: { userId: user.id },
-      select: { courseId: true },
-    });
-    const enrolledCourseIds = enrollments.map((e: { courseId: string }) => e.courseId);
-    courseFilter = {
-      OR: [
-        { courseId: null },
-        { courseId: { in: enrolledCourseIds } },
-      ],
-    };
-  }
-
   const now = new Date();
   const nextWeek = new Date();
   nextWeek.setDate(now.getDate() + 7);
 
   const dbLiveClasses = await prisma.liveClass.findMany({
     where: {
-      ...courseFilter as any,
+      courseId: null,
       startsAt: {
         gte: now,
         lte: nextWeek,
@@ -437,6 +408,7 @@ export async function getAdminCourses(): Promise<AdminCourse[]> {
     slug: (c as any).slug,
     title: (c as any).title,
     category: (c as any).category,
+    program: (c as any).program ?? "",
     price: (c as any).price,
     disabled: (c as any).disabled,
     instructorName: (c as any).instructor.name,

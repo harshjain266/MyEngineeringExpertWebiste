@@ -26,6 +26,9 @@ export const dynamic = "force-dynamic";
 
 export default async function TeachersPage() {
   const instructors = await prisma.instructor.findMany({
+    where: {
+      courses: { some: { disabled: false } },
+    },
     include: {
       courses: {
         select: { id: true, slug: true, title: true, disabled: true },

@@ -82,7 +82,7 @@ export const courses: Course[] = [
   {
     id: "crs_dbms",
     slug: "database-management-systems",
-    program: "btech-bca",
+    program: "btech_bca",
     title: "Database Management Systems",
     category: "Computer Science",
     level: "Intermediate",
@@ -145,7 +145,7 @@ export const courses: Course[] = [
   {
     id: "crs_math",
     slug: "engineering-mathematics-ii",
-    program: "btech-bca",
+    program: "btech_bca",
     title: "Engineering Mathematics II",
     category: "Computer Science",
     level: "Beginner",
@@ -165,7 +165,7 @@ export const courses: Course[] = [
   {
     id: "crs_oop",
     slug: "object-oriented-programming-java",
-    program: "btech-bca",
+    program: "btech_bca",
     title: "Object Oriented Programming in Java",
     category: "Information Technology",
     level: "Intermediate",
@@ -208,7 +208,7 @@ export const courses: Course[] = [
   {
     id: "crs_se",
     slug: "software-engineering",
-    program: "btech-bca",
+    program: "btech_bca",
     title: "Software Engineering",
     category: "Information Technology",
     level: "Intermediate",
@@ -288,7 +288,7 @@ export const courses: Course[] = [
   {
     id: "crs_discrete",
     slug: "discrete-mathematics",
-    program: "btech-bca",
+    program: "btech_bca",
     title: "Discrete Mathematics",
     category: "Computer Science",
     level: "Intermediate",
@@ -307,7 +307,7 @@ export const courses: Course[] = [
   {
     id: "crs_micro",
     slug: "microprocessors-microcontrollers",
-    program: "btech-bca",
+    program: "btech_bca",
     title: "Microprocessors & Microcontrollers",
     category: "Electronics",
     level: "Intermediate",
@@ -326,7 +326,7 @@ export const courses: Course[] = [
   {
     id: "crs_ai",
     slug: "artificial-intelligence",
-    program: "btech-bca",
+    program: "btech_bca",
     title: "Artificial Intelligence",
     category: "Computer Science",
     level: "Intermediate",

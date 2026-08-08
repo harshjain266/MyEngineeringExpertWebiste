@@ -13,13 +13,13 @@ const prisma = new PrismaClient();
 /** program slug for each existing course, keyed by slug */
 const PROGRAM_BY_COURSE: Record<string, string> = {
   "data-structures-using-cpp": "dsa",
-  "database-management-systems": "btech-bca",
+  "database-management-systems": "btech_bca",
   "operating-systems": "gate",
   "computer-networks": "gate",
-  "engineering-mathematics-ii": "btech-bca",
-  "object-oriented-programming-java": "btech-bca",
+  "engineering-mathematics-ii": "btech_bca",
+  "object-oriented-programming-java": "btech_bca",
   "digital-electronics": "gate",
-  "software-engineering": "btech-bca",
+  "software-engineering": "btech_bca",
 };
 
 const NEW_INSTRUCTORS = [

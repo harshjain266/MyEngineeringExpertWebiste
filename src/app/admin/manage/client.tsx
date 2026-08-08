@@ -23,6 +23,7 @@ import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { AdminAccountsTable } from "@/components/admin/admin-accounts-table";
 import { AssignTeacher } from "@/components/admin/assign-teacher";
 import { BulkAssignBar } from "@/components/admin/bulk-assign-bar";
+import { PROGRAMS, PROGRAM_BY_SLUG } from "@/config/programs";
 import { cn, formatDate } from "@/lib/utils";
 import type { AdminUser, AdminInstructor, AdminCourse, AdminAccount } from "@/types";
 
@@ -55,6 +56,7 @@ export function AdminManageClient({
 }: Props) {
   const [tab, setTab] = useState<Tab>("users");
   const [search, setSearch] = useState("");
+  const [programFilter, setProgramFilter] = useState("all");
 
   const [localUsers, setLocalUsers] = useState(initialUsers);
   const [localInstructors, setLocalInstructors] = useState(initialInstructors);
@@ -63,11 +65,13 @@ export function AdminManageClient({
 
   const [toggleLoading, setToggleLoading] = useState<Set<string>>(new Set());
   const [promoteLoading, setPromoteLoading] = useState<Set<string>>(new Set());
+  const [programLoading, setProgramLoading] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const switchTab = useCallback((next: Tab) => {
     setTab(next);
     setSearch("");
+    setProgramFilter("all");
     setSelectedIds(new Set());
   }, []);
 
@@ -230,6 +234,37 @@ export function AdminManageClient({
     [applyAssignment, selectedIds],
   );
 
+  const handleUpdateCourseProgram = useCallback(
+    async (courseId: string, program: string) => {
+      if (!PROGRAM_BY_SLUG[program]) return;
+      setProgramLoading((prev) => new Set(prev).add(courseId));
+      try {
+        const res = await fetch("/api/admin/update-course-program", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courseId, program }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Failed to update program");
+        }
+        setLocalCourses((prev) =>
+          prev.map((c) => (c.id === courseId ? { ...c, program } : c)),
+        );
+      } catch (err) {
+        console.error("[Manage] Update course program failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to update program");
+      } finally {
+        setProgramLoading((prev) => {
+          const next = new Set(prev);
+          next.delete(courseId);
+          return next;
+        });
+      }
+    },
+    [],
+  );
+
   const handleToggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -361,8 +396,12 @@ export function AdminManageClient({
             <CourseTable
               courses={localCourses}
               search={search}
+              programFilter={programFilter}
+              onProgramFilter={setProgramFilter}
               onToggle={handleToggle}
+              onUpdateProgram={handleUpdateCourseProgram}
               toggleLoading={toggleLoading}
+              programLoading={programLoading}
             />
           )}
           {tab === "admins" && (
@@ -660,28 +699,52 @@ function InstructorTable({
 function CourseTable({
   courses,
   search,
+  programFilter,
+  onProgramFilter,
   onToggle,
+  onUpdateProgram,
   toggleLoading,
+  programLoading,
 }: {
   courses: AdminCourse[];
   search: string;
+  programFilter: string;
+  onProgramFilter: (program: string) => void;
   onToggle: (type: "user" | "instructor" | "course", id: string, disabled: boolean) => void;
+  onUpdateProgram: (courseId: string, program: string) => void;
   toggleLoading: Set<string>;
+  programLoading: Set<string>;
 }) {
   const filtered = courses.filter(
     (c) =>
-      c.title.toLowerCase().includes(search.toLowerCase()) ||
-      c.instructorName.toLowerCase().includes(search.toLowerCase()) ||
-      c.category.toLowerCase().includes(search.toLowerCase()),
+      (programFilter === "all" || c.program === programFilter) &&
+      (c.title.toLowerCase().includes(search.toLowerCase()) ||
+        c.instructorName.toLowerCase().includes(search.toLowerCase()) ||
+        c.category.toLowerCase().includes(search.toLowerCase())),
   );
 
   return (
     <div className="overflow-hidden rounded-3xl border border-surface-muted bg-white shadow-soft">
-      <div className="border-b border-surface-muted bg-surface-subtle px-6 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-surface-muted bg-surface-subtle px-6 py-4">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
           <BookOpen size={18} className="text-brand-600" />
           Courses
         </h2>
+        <label className="flex items-center gap-2 text-xs font-semibold text-ink-muted">
+          <span className="shrink-0">Program</span>
+          <select
+            value={programFilter}
+            onChange={(e) => onProgramFilter(e.target.value)}
+            className="h-9 rounded-xl border border-surface-muted bg-white px-3 text-sm font-medium text-ink outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-500/10"
+          >
+            <option value="all">All programs</option>
+            {PROGRAMS.map((p) => (
+              <option key={p.slug} value={p.slug}>
+                {p.icon} {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       <motion.div className="divide-y divide-surface-muted" variants={container} initial="hidden" animate="show">
         {filtered.length === 0 ? (
@@ -689,6 +752,7 @@ function CourseTable({
         ) : (
           filtered.map((c) => {
             const isToggling = toggleLoading.has(`course-${c.id}`);
+            const isUpdatingProgram = programLoading.has(c.id);
             return (
               <motion.div
                 key={c.id}
@@ -721,6 +785,22 @@ function CourseTable({
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  <select
+                    value={c.program || "btech-bca"}
+                    disabled={isUpdatingProgram}
+                    onChange={(e) => onUpdateProgram(c.id, e.target.value)}
+                    title="Assign program"
+                    className="h-9 rounded-xl border border-surface-muted bg-white px-2.5 text-xs font-semibold text-ink outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-500/10 disabled:opacity-60"
+                  >
+                    <option value="" disabled>
+                      {isUpdatingProgram ? "Saving…" : PROGRAM_BY_SLUG[c.program]?.name || "No program"}
+                    </option>
+                    {PROGRAMS.map((p) => (
+                      <option key={p.slug} value={p.slug}>
+                        {p.icon} {p.name}
+                      </option>
+                    ))}
+                  </select>
                   {isToggling ? (
                     <div className="h-6 w-11 animate-pulse rounded-full bg-surface-muted" />
                   ) : (
