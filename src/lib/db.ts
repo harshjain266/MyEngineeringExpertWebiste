@@ -4,9 +4,6 @@ import { PrismaClient } from "@prisma/client";
  * Prisma client (singleton).
  *
  * Guarded so Next.js hot-reload doesn't spawn a new pool on every change.
- * While `USE_MOCK_DATA=true` the data layer in `@/lib/data` reads from
- * typed mock fixtures instead of hitting Prisma — but the client is wired
- * and ready for when real Postgres is connected.
  */
 
 declare global {

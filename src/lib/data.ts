@@ -1,8 +1,6 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
-import type { Program as DbProgram } from "@prisma/client";
-import * as mock from "@/lib/mock-data";
+import type { Prisma, Program as DbProgram } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { isSuperAdmin } from "@/lib/roles";
@@ -16,12 +14,8 @@ import type {
  * Data-access layer.
  *
  * Every screen reads through these functions, never from fixtures or Prisma
- * directly. While `USE_MOCK_DATA !== "false"` they return typed mock data;
- * flip the env flag and reimplement each body against Prisma + Redis
- * (via `cached(...)`) without touching any component.
+ * directly.
  */
-
-const USE_MOCK = false; // Forced to false as per user request
 
 export async function getDashboardData() {
   const user = await getCurrentUser();
