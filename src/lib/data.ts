@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Prisma, Program as DbProgram } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { isSuperAdmin } from "@/lib/roles";
@@ -182,6 +182,8 @@ export async function getPrograms(): Promise<Program[]> {
 export async function getProgramBySlug(slug: string): Promise<Program | undefined> {
   return PROGRAM_BY_SLUG[slug];
 }
+
+type DbProgram = "btech_bca" | "dsa" | "aptitude" | "gate" | "web_dev";
 
 export async function getCoursesByProgram(programSlug: string): Promise<Course[]> {
   const dbCourses = await prisma.course.findMany({
