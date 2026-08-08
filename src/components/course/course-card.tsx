@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Clock, PlayCircle } from "lucide-react";
+import { BookOpen, Clock, PlayCircle } from "lucide-react";
 import type { Course } from "@/types";
 import { Button } from "@/components/ui/button";
 import { BuyNowButton } from "./buy-now-button";
@@ -23,13 +23,19 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
       className="group flex h-full flex-col overflow-hidden rounded-none border border-surface-muted bg-white shadow-soft transition-all duration-300 hover:border-brand-500 hover:shadow-glow active:border-brand-600"
     >
       <Link href={`/courses/${course.slug}`} className="relative block aspect-[16/10] overflow-hidden">
-        <Image
-          src={course.thumbnail}
-          alt={course.title}
-          fill
-          sizes="(max-width: 768px) 100vw, 320px"
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+        {course.thumbnail ? (
+          <Image
+            src={course.thumbnail}
+            alt={course.title}
+            fill
+            sizes="(max-width: 768px) 100vw, 320px"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-brand-50 text-brand-300">
+            <BookOpen size={40} />
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink/50 via-transparent to-transparent" />
       </Link>
 
@@ -48,13 +54,19 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
           href={`/teachers/${course.instructor.id}?from=${encodeURIComponent(pathname)}`}
           className="flex items-center gap-2 rounded-lg transition-colors hover:text-brand-700"
         >
-          <Image
-            src={course.instructor.avatar}
-            alt={course.instructor.name}
-            width={20}
-            height={20}
-            className="rounded-full"
-          />
+          {course.instructor.avatar ? (
+            <Image
+              src={course.instructor.avatar}
+              alt={course.instructor.name}
+              width={20}
+              height={20}
+              className="rounded-full"
+            />
+          ) : (
+            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-700">
+              {course.instructor.name.slice(0, 1)}
+            </span>
+          )}
           <span className="text-[11px] text-ink-soft hover:text-brand-700">
             {course.instructor.name}
           </span>

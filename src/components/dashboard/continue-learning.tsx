@@ -20,13 +20,19 @@ export function ContinueLearning({ items }: { items: EnrolledCourse[] }) {
           className="group flex gap-3 rounded-none border border-surface-muted bg-white p-3 transition-all hover:border-brand-200 hover:shadow-card"
         >
           <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-none">
-            <Image
-              src={item.course.thumbnail}
-              alt={item.course.title}
-              fill
-              sizes="112px"
-              className="object-cover transition-transform group-hover:scale-105"
-            />
+            {item.course.thumbnail ? (
+              <Image
+                src={item.course.thumbnail}
+                alt={item.course.title}
+                fill
+                sizes="112px"
+                className="object-cover transition-transform group-hover:scale-105"
+              />
+            ) : (
+              <div className="grid h-full w-full place-items-center bg-brand-50 text-brand-300">
+                <PlayCircle size={22} />
+              </div>
+            )}
             <span className="absolute inset-0 grid place-items-center bg-ink/20 opacity-0 transition-opacity group-hover:opacity-100">
               <PlayCircle className="text-white" size={28} />
             </span>

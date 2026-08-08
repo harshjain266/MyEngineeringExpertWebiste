@@ -66,23 +66,39 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role;
+        token.name = (user as any).name ?? "Student";
+        token.email = (user as any).email ?? undefined;
+        token.avatar = (user as any).avatar ?? undefined;
       }
       delete (token as any).picture;
-      delete (token as any).name;
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
-
-        const fresh = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { name: true, avatar: true, email: true },
-        });
-        session.user.name = fresh?.name ?? "Student";
+        session.user.name = (token.name as string) ?? "Student";
+        session.user.email = (token.email as string) ?? session.user.email;
         (session.user as any).avatar =
-          fresh?.avatar ?? DEFAULT_AVATAR(fresh?.email ?? String(token.id));
+          (token.avatar as string) ?? DEFAULT_AVATAR(String(token.id));
+
+        try {
+          const fresh = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { name: true, avatar: true, email: true },
+          });
+          if (fresh) {
+            session.user.name = fresh.name ?? "Student";
+            session.user.email = fresh.email ?? session.user.email;
+            (session.user as any).avatar =
+              fresh.avatar ?? DEFAULT_AVATAR(fresh.email ?? String(token.id));
+            token.name = fresh.name;
+            token.email = fresh.email;
+            token.avatar = fresh.avatar;
+          }
+        } catch {
+          // DB unreachable — keep token values so auth never breaks.
+        }
       }
       return session;
     },

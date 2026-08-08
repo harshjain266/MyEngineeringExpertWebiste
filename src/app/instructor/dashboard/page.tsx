@@ -191,12 +191,17 @@ export default async function InstructorDashboardPage() {
                 Open a batch to view all classes and join links for that course.
               </p>
             </div>
-            <Link href="/instructor/batches">
-              <Button variant="secondary" size="sm">
-                View All <ArrowRight size={15} />
-              </Button>
-            </Link>
-          </div>
+<Link href="/instructor/batches">
+                <Button variant="secondary" size="sm">
+                  View My Batches <ArrowRight size={15} />
+                </Button>
+              </Link>
+              <Link href="/instructor/settings/profile">
+                <Button variant="outline" size="sm">
+                  Update Profile
+                </Button>
+              </Link>
+            </div>
 
           {batches.length === 0 ? (
             <EmptyState
