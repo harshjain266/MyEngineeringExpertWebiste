@@ -62,13 +62,14 @@ export const authOptions: NextAuthOptions = {
 
   ],
   callbacks: {
+    // Keep the JWT small. Storing large values (e.g. base64 avatars) in the
+    // token bloats the session cookie and causes 494 REQUEST_HEADER_TOO_LARGE.
     async jwt({ token, user }) {
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role;
         token.name = (user as any).name ?? "Student";
         token.email = (user as any).email ?? undefined;
-        token.avatar = (user as any).avatar ?? undefined;
       }
       delete (token as any).picture;
       return token;
@@ -79,26 +80,6 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).role = token.role;
         session.user.name = (token.name as string) ?? "Student";
         session.user.email = (token.email as string) ?? session.user.email;
-        (session.user as any).avatar =
-          (token.avatar as string) ?? DEFAULT_AVATAR(String(token.id));
-
-        try {
-          const fresh = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: { name: true, avatar: true, email: true },
-          });
-          if (fresh) {
-            session.user.name = fresh.name ?? "Student";
-            session.user.email = fresh.email ?? session.user.email;
-            (session.user as any).avatar =
-              fresh.avatar ?? DEFAULT_AVATAR(fresh.email ?? String(token.id));
-            token.name = fresh.name;
-            token.email = fresh.email;
-            token.avatar = fresh.avatar;
-          }
-        } catch {
-          // DB unreachable — keep token values so auth never breaks.
-        }
       }
       return session;
     },
@@ -116,11 +97,36 @@ export const authOptions: NextAuthOptions = {
 export async function getCurrentUser(): Promise<User | null> {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user) {
+  if (!session?.user || !(session.user as any).id) {
     return null;
   }
 
-  return session.user as any as User;
+  const dbUser = await prisma.user.findUnique({
+    where: { id: (session.user as any).id as string },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      avatar: true,
+      role: true,
+      plan: true,
+    },
+  });
+
+  if (!dbUser) {
+    return null;
+  }
+
+  return {
+    id: dbUser.id,
+    name: dbUser.name ?? "Student",
+    email: dbUser.email ?? undefined,
+    phone: dbUser.phone ?? undefined,
+    avatar: dbUser.avatar ?? DEFAULT_AVATAR(dbUser.email ?? dbUser.id),
+    role: dbUser.role,
+    plan: dbUser.plan,
+  };
 }
 
 export async function isAuthenticated(): Promise<boolean> {
