@@ -7,7 +7,8 @@ import { isSuperAdmin } from "@/lib/roles";
 import { PROGRAMS, PROGRAM_BY_SLUG } from "@/config/programs";
 import type { 
   Course, EnrolledCourse, LiveClass, LearningStats, Program, Announcement,
-  AdminUser, AdminInstructor, AdminCourse, AdminAccount, User 
+  AdminUser, AdminInstructor, AdminCourse, AdminAccount, AdminLiveClass, User,
+  PendingCourse, PendingLiveClass, PendingBlog, StudyMaterial, AppNotification
 } from "@/types";
 
 /**
@@ -16,6 +17,64 @@ import type {
  * Every screen reads through these functions, never from fixtures or Prisma
  * directly.
  */
+
+/**
+ * The only courses a student may ever see: enabled *and* signed off by the
+ * superadmin. Spread this into every student-facing course query.
+ */
+export const PUBLIC_COURSE_FILTER = {
+  disabled: false,
+  approvalStatus: "approved",
+} as const satisfies Prisma.CourseWhereInput;
+
+/** Live classes are likewise hidden until the superadmin approves them. */
+export const PUBLIC_LIVE_CLASS_FILTER = {
+  approvalStatus: "approved",
+} as const satisfies Prisma.LiveClassWhereInput;
+
+/**
+ * The window a student should still see a class in.
+ *
+ * Note the `endsAt` bound rather than `startsAt`: a session that began ten
+ * minutes ago is exactly the one a student needs to join, so filtering on
+ * "starts in the future" would hide every class the moment it went live.
+ * Anything explicitly marked Live/Ongoing is always included.
+ */
+export function liveClassWindow(days = 7): Prisma.LiveClassWhereInput {
+  const now = new Date();
+  const until = new Date();
+  until.setDate(now.getDate() + days);
+
+  return {
+    ...PUBLIC_LIVE_CLASS_FILTER,
+    OR: [
+      { endsAt: { gte: now }, startsAt: { lte: until } },
+      { status: { in: ["Live", "Ongoing"] } },
+    ],
+  };
+}
+
+/** Shape a Prisma live class for the UI, with the master-class flag derived. */
+function toLiveClass(lc: {
+  startsAt: Date;
+  endsAt: Date;
+  courseId: string | null;
+  [key: string]: unknown;
+}): LiveClass {
+  return {
+    ...lc,
+    startsAt: lc.startsAt.toISOString(),
+    endsAt: lc.endsAt.toISOString(),
+    // A class with no course is open to every student — that is a master class.
+    isMasterClass: lc.courseId === null,
+  } as unknown as LiveClass;
+}
+
+/** Blogs need both the author's publish action and the admin's approval. */
+export const PUBLIC_BLOG_FILTER = {
+  published: true,
+  approvalStatus: "approved",
+} as const satisfies Prisma.BlogWhereInput;
 
 export async function getDashboardData() {
   const user = await getCurrentUser();
@@ -55,7 +114,8 @@ export async function getDashboardData() {
       },
       enrolled: [],
       recommended: [],
-      liveClasses: [],
+      masterClasses: [],
+      batchClasses: [],
       announcements: [],
     };
   }
@@ -88,28 +148,30 @@ export async function getDashboardData() {
     averageScore: 0,
   };
 
-  const now = new Date();
-  const nextWeek = new Date();
-  nextWeek.setDate(now.getDate() + 7);
+  const enrolledIds = enrolled.map((e) => e.course.id);
 
-  const [liveClasses, recommended, announcements] = await Promise.all([
+  const [masterClasses, batchClasses, recommended, announcements] = await Promise.all([
+    // Free for everyone, no course attached.
     prisma.liveClass.findMany({
-      where: {
-        courseId: null,
-        startsAt: {
-          gte: now,
-          lte: nextWeek,
-        },
-      },
+      where: { ...liveClassWindow(), courseId: null },
       include: { instructor: true },
       orderBy: { startsAt: 'asc' },
-      take: 7 // Max 7 as per request
+      take: 7
     }),
+    // The student's own purchased-batch classes.
+    enrolledIds.length === 0
+      ? Promise.resolve([])
+      : prisma.liveClass.findMany({
+          where: { ...liveClassWindow(), courseId: { in: enrolledIds } },
+          include: { instructor: true, course: { select: { title: true, slug: true } } },
+          orderBy: { startsAt: 'asc' },
+          take: 7
+        }),
     prisma.course.findMany({
       where: {
-        id: { notIn: enrolled.map(e => e.course.id) },
+        ...PUBLIC_COURSE_FILTER,
+        id: { notIn: enrolledIds },
         popular: true,
-        disabled: false
       },
       include: { 
         instructor: true,
@@ -132,18 +194,37 @@ export async function getDashboardData() {
       ...c,
       enrollmentCount: (c as any)._count?.enrollments || 0
     })) as unknown as Course[],
-    liveClasses: liveClasses.map((lc: Record<string, unknown>) => ({
-      ...lc,
-      startsAt: (lc as any).startsAt.toISOString(),
-      endsAt: (lc as any).endsAt.toISOString(),
-      status: (lc as any).status as any
-    })) as unknown as LiveClass[],
+    masterClasses: masterClasses.map(toLiveClass),
+    batchClasses: batchClasses.map(toLiveClass),
     announcements: announcements.map((a: Record<string, unknown>) => ({
       ...a,
       date: (a as any).date.toISOString().split('T')[0],
       tone: (a as any).tone as any
     })) as unknown as Announcement[],
   };
+}
+
+export async function getUserOrders() {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const orders = await prisma.order.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    include: { user: true },
+  });
+
+  return orders.map((o) => ({
+    id: o.id,
+    course: o.course,
+    courseId: o.courseId,
+    amount: o.amount,
+    status: o.status,
+    planName: o.planName,
+    razorpayOrderId: o.razorpayOrderId,
+    razorpayPaymentId: o.razorpayPaymentId,
+    createdAt: o.createdAt.toISOString(),
+  }));
 }
 
 export async function getCourses(): Promise<Course[]> {
@@ -159,8 +240,8 @@ export async function getCourses(): Promise<Course[]> {
   }
 
   const dbCourses = await prisma.course.findMany({
-    where: { disabled: false },
-    include: { 
+    where: PUBLIC_COURSE_FILTER,
+    include: {
       instructor: true,
       _count: {
         select: { enrollments: true }
@@ -187,7 +268,7 @@ type DbProgram = "btech_bca" | "dsa" | "aptitude" | "gate" | "web_dev";
 
 export async function getCoursesByProgram(programSlug: string): Promise<Course[]> {
   const dbCourses = await prisma.course.findMany({
-    where: { program: programSlug as DbProgram, disabled: false },
+    where: { ...PUBLIC_COURSE_FILTER, program: programSlug as DbProgram },
     include: { 
       instructor: true,
       _count: {
@@ -203,18 +284,29 @@ export async function getCoursesByProgram(programSlug: string): Promise<Course[]
   })) as unknown as Course[];
 }
 
-export async function getCourseBySlug(slug: string): Promise<Course | undefined> {
+/**
+ * @param requireApproved keep `true` for public/marketing surfaces. Pass
+ * `false` only where enrollment has already been verified, so a student who
+ * paid for a course never loses access if it is later pulled from the catalogue.
+ */
+export async function getCourseBySlug(
+  slug: string,
+  requireApproved = true,
+): Promise<Course | undefined> {
   const course = await prisma.course.findUnique({
     where: { slug },
-    include: { 
+    include: {
       instructor: true,
       _count: {
         select: { enrollments: true }
       }
     }
   });
-  
+
   if (!course) return undefined;
+  if (requireApproved && (course.disabled || course.approvalStatus !== "approved")) {
+    return undefined;
+  }
 
   return {
     ...course,
@@ -254,55 +346,54 @@ export async function getLiveClassesByCourse(courseId: string): Promise<LiveClas
 
   if (!enrollment) throw new Error("Not enrolled in this course");
 
-  const now = new Date();
-  const nextWeek = new Date();
-  nextWeek.setDate(now.getDate() + 7);
-
   const dbLiveClasses = await prisma.liveClass.findMany({
-    where: {
-      courseId: courseId,
-      startsAt: {
-        gte: now,
-        lte: nextWeek,
-      },
-    },
-    include: { instructor: true },
-    orderBy: { startsAt: 'asc' },
-    take: 7
-  });
-
-  return dbLiveClasses.map((lc: Record<string, unknown>) => ({
-    ...lc,
-    startsAt: (lc as any).startsAt.toISOString(),
-    endsAt: (lc as any).endsAt.toISOString(),
-    status: (lc as any).status as any
-  })) as unknown as LiveClass[];
-}
-
-export async function getAllLiveClasses(): Promise<LiveClass[]> {
-  const now = new Date();
-  const nextWeek = new Date();
-  nextWeek.setDate(now.getDate() + 7);
-
-  const dbLiveClasses = await prisma.liveClass.findMany({
-    where: {
-      courseId: null,
-      startsAt: {
-        gte: now,
-        lte: nextWeek,
-      },
-    },
+    where: { ...liveClassWindow(), courseId },
     include: { instructor: true },
     orderBy: { startsAt: "asc" },
-    take: 7
+    take: 20,
   });
 
-  return dbLiveClasses.map((lc: Record<string, unknown>) => ({
-    ...lc,
-    startsAt: (lc as any).startsAt.toISOString(),
-    endsAt: (lc as any).endsAt.toISOString(),
-    status: (lc as any).status as any,
-  })) as unknown as LiveClass[];
+  return dbLiveClasses.map(toLiveClass);
+}
+
+/**
+ * Master classes: sessions with no course attached, free and visible to every
+ * signed-in student. The paid, course-linked sessions live in
+ * `getMyBatchLiveClasses` / `getLiveClassesByCourse`.
+ */
+export async function getAllLiveClasses(): Promise<LiveClass[]> {
+  const dbLiveClasses = await prisma.liveClass.findMany({
+    where: { ...liveClassWindow(), courseId: null },
+    include: { instructor: true },
+    orderBy: { startsAt: "asc" },
+    take: 20,
+  });
+
+  return dbLiveClasses.map(toLiveClass);
+}
+
+/** Every upcoming/ongoing class across the courses this student has bought. */
+export async function getMyBatchLiveClasses(): Promise<LiveClass[]> {
+  const user = await getCurrentUser();
+  if (!user) return [];
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { userId: user.id },
+    select: { courseId: true },
+  });
+  if (enrollments.length === 0) return [];
+
+  const dbLiveClasses = await prisma.liveClass.findMany({
+    where: {
+      ...liveClassWindow(),
+      courseId: { in: enrollments.map((e) => e.courseId) },
+    },
+    include: { instructor: true, course: { select: { title: true, slug: true } } },
+    orderBy: { startsAt: "asc" },
+    take: 20,
+  });
+
+  return dbLiveClasses.map(toLiveClass);
 }
 
 export async function getOrders() {
@@ -410,6 +501,281 @@ export async function getAdminCourses(): Promise<AdminCourse[]> {
     instructorName: (c as any).instructor.name,
     enrollmentCount: (c as any)._count.enrollments,
     createdAt: (c as any).createdAt.toISOString(),
+    startsOn: (c as any).startsOn ? (c as any).startsOn.toISOString() : null,
+    endsOn: (c as any).endsOn ? (c as any).endsOn.toISOString() : null,
+    approvalStatus: (c as any).approvalStatus,
+    reviewNote: (c as any).reviewNote ?? null,
+  }));
+}
+
+/** Live classes scoped to an admin's aligned instructors (all for superadmin). */
+export async function getAdminLiveClasses(user: User): Promise<AdminLiveClass[]> {
+  const scope = adminInstructorScope(user);
+  const liveClasses = await prisma.liveClass.findMany({
+    where: {
+      instructor: {
+        is: {
+          ...(Object.keys(scope).length > 0 ? scope : {}),
+        },
+      },
+    },
+    orderBy: { startsAt: "desc" },
+    include: {
+      instructor: { select: { name: true } },
+      course: { select: { title: true } },
+    },
+  });
+  return liveClasses.map((lc: Record<string, unknown>) => ({
+    id: (lc as any).id,
+    title: (lc as any).title,
+    topic: (lc as any).topic,
+    subject: (lc as any).subject ?? null,
+    meetingUrl: (lc as any).meetingUrl ?? null,
+    startsAt: (lc as any).startsAt.toISOString(),
+    endsAt: (lc as any).endsAt.toISOString(),
+    status: (lc as any).status as any,
+    instructorId: (lc as any).instructorId,
+    instructorName: (lc as any).instructor.name,
+    courseId: (lc as any).courseId ?? null,
+    courseTitle: (lc as any).course?.title ?? null,
+    approvalStatus: (lc as any).approvalStatus,
+    reviewNote: (lc as any).reviewNote ?? null,
+  }));
+}
+
+/* ─── Approval queue ────────────────────────────────────────── */
+
+/**
+ * Everything waiting on the signed-in reviewer.
+ *
+ * Courses and live classes surface for the superadmin only; blogs surface for
+ * the admin who manages the author's teacher (and for superadmins, who see
+ * every blog as a fallback when a teacher has no admin assigned).
+ */
+export async function getApprovalQueue(user: User) {
+  const superadmin = isSuperAdmin(user);
+
+  const blogWhere: Prisma.BlogWhereInput = superadmin
+    ? {}
+    : { author: { instructor: { adminId: user.id } } };
+
+  const [courses, liveClasses, blogs] = await Promise.all([
+    superadmin
+      ? prisma.course.findMany({
+          orderBy: [{ approvalStatus: "asc" }, { createdAt: "desc" }],
+          include: {
+            instructor: { select: { name: true } },
+            submittedBy: { select: { name: true } },
+            reviewedBy: { select: { name: true } },
+          },
+        })
+      : Promise.resolve([]),
+    superadmin
+      ? prisma.liveClass.findMany({
+          orderBy: [{ approvalStatus: "asc" }, { createdAt: "desc" }],
+          include: {
+            instructor: { select: { name: true } },
+            course: { select: { title: true } },
+            submittedBy: { select: { name: true } },
+            reviewedBy: { select: { name: true } },
+          },
+        })
+      : Promise.resolve([]),
+    prisma.blog.findMany({
+      where: blogWhere,
+      orderBy: [{ approvalStatus: "asc" }, { createdAt: "desc" }],
+      include: {
+        author: { select: { name: true } },
+        reviewedBy: { select: { name: true } },
+      },
+    }),
+  ]);
+
+  const pendingCourses: PendingCourse[] = courses.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    title: c.title,
+    category: c.category,
+    program: c.program,
+    level: c.level,
+    price: c.price,
+    originalPrice: c.originalPrice,
+    durationHours: c.durationHours,
+    lectures: c.lectures,
+    language: c.language,
+    thumbnail: c.thumbnail,
+    badge: c.badge,
+    startsOn: c.startsOn?.toISOString() ?? null,
+    endsOn: c.endsOn?.toISOString() ?? null,
+    instructorName: c.instructor.name,
+    createdAt: c.createdAt.toISOString(),
+    approvalStatus: c.approvalStatus,
+    reviewNote: c.reviewNote,
+    reviewedAt: c.reviewedAt?.toISOString() ?? null,
+    reviewerName: c.reviewedBy?.name ?? null,
+    submittedByName: c.submittedBy?.name ?? null,
+  }));
+
+  const pendingLiveClasses: PendingLiveClass[] = liveClasses.map((lc) => ({
+    id: lc.id,
+    title: lc.title,
+    topic: lc.topic,
+    subject: lc.subject,
+    meetingUrl: lc.meetingUrl,
+    startsAt: lc.startsAt.toISOString(),
+    endsAt: lc.endsAt.toISOString(),
+    instructorName: lc.instructor.name,
+    courseTitle: lc.course?.title ?? null,
+    createdAt: lc.createdAt.toISOString(),
+    approvalStatus: lc.approvalStatus,
+    reviewNote: lc.reviewNote,
+    reviewedAt: lc.reviewedAt?.toISOString() ?? null,
+    reviewerName: lc.reviewedBy?.name ?? null,
+    submittedByName: lc.submittedBy?.name ?? null,
+  }));
+
+  const pendingBlogs: PendingBlog[] = blogs.map((b) => ({
+    id: b.id,
+    slug: b.slug,
+    title: b.title,
+    subject: b.subject,
+    excerpt: b.excerpt,
+    content: b.content,
+    tags: b.tags,
+    featuredImage: b.featuredImage,
+    featured: b.featured,
+    readMinutes: b.readMinutes,
+    authorName: b.author.name,
+    createdAt: b.createdAt.toISOString(),
+    approvalStatus: b.approvalStatus,
+    reviewNote: b.reviewNote,
+    reviewedAt: b.reviewedAt?.toISOString() ?? null,
+    reviewerName: b.reviewedBy?.name ?? null,
+    submittedByName: b.author.name,
+  }));
+
+  const pendingOnly = <T extends { approvalStatus: string }>(rows: T[]) =>
+    rows.filter((r) => r.approvalStatus === "pending").length;
+
+  return {
+    courses: pendingCourses,
+    liveClasses: pendingLiveClasses,
+    blogs: pendingBlogs,
+    counts: {
+      courses: pendingOnly(pendingCourses),
+      liveClasses: pendingOnly(pendingLiveClasses),
+      blogs: pendingOnly(pendingBlogs),
+    },
+  };
+}
+
+/** Pending-approval badge count for the sidebar. */
+export async function getPendingApprovalCount(user: User): Promise<number> {
+  if (isSuperAdmin(user)) {
+    const [courses, liveClasses, blogs] = await Promise.all([
+      prisma.course.count({ where: { approvalStatus: "pending" } }),
+      prisma.liveClass.count({ where: { approvalStatus: "pending" } }),
+      prisma.blog.count({ where: { approvalStatus: "pending" } }),
+    ]);
+    return courses + liveClasses + blogs;
+  }
+
+  return prisma.blog.count({
+    where: {
+      approvalStatus: "pending",
+      author: { instructor: { adminId: user.id } },
+    },
+  });
+}
+
+/* ─── Study material ────────────────────────────────────────── */
+
+/** Materials for a course the signed-in student actually bought. */
+export async function getCourseMaterialsForStudent(
+  courseId: string,
+): Promise<StudyMaterial[]> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const enrollment = await prisma.enrollment.findUnique({
+    where: { userId_courseId: { userId: user.id, courseId } },
+    select: { id: true },
+  });
+  if (!enrollment) throw new Error("Not enrolled in this course");
+
+  return listCourseMaterials(courseId);
+}
+
+/**
+ * Every material across every course this student has bought, for the
+ * dedicated Study Material page. Returns the enrolled-course list alongside it
+ * so the page can render its course filter without a second round trip.
+ */
+export async function getMyStudyMaterials(): Promise<{
+  materials: StudyMaterial[];
+  courses: { id: string; title: string; slug: string }[];
+}> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { userId: user.id },
+    select: { course: { select: { id: true, title: true, slug: true } } },
+    orderBy: { lastAccessed: "desc" },
+  });
+
+  const courses = enrollments.map((e) => e.course);
+  if (courses.length === 0) return { materials: [], courses: [] };
+
+  const materials = await prisma.studyMaterial.findMany({
+    where: { courseId: { in: courses.map((c) => c.id) } },
+    orderBy: { createdAt: "desc" },
+    include: {
+      uploadedBy: { select: { name: true } },
+      course: { select: { title: true, slug: true } },
+    },
+  });
+
+  return {
+    courses,
+    materials: materials.map((m) => ({
+      id: m.id,
+      courseId: m.courseId,
+      courseTitle: m.course.title,
+      courseSlug: m.course.slug,
+      title: m.title,
+      description: m.description,
+      kind: m.kind,
+      url: m.url,
+      fileName: m.fileName,
+      fileSize: m.fileSize,
+      mimeType: m.mimeType,
+      uploadedByName: m.uploadedBy.name,
+      createdAt: m.createdAt.toISOString(),
+    })),
+  };
+}
+
+/** Raw material list — callers must have already authorised access. */
+export async function listCourseMaterials(courseId: string): Promise<StudyMaterial[]> {
+  const materials = await prisma.studyMaterial.findMany({
+    where: { courseId },
+    orderBy: { createdAt: "desc" },
+    include: { uploadedBy: { select: { name: true } } },
+  });
+
+  return materials.map((m) => ({
+    id: m.id,
+    courseId: m.courseId,
+    title: m.title,
+    description: m.description,
+    kind: m.kind,
+    url: m.url,
+    fileName: m.fileName,
+    fileSize: m.fileSize,
+    mimeType: m.mimeType,
+    uploadedByName: m.uploadedBy.name,
+    createdAt: m.createdAt.toISOString(),
   }));
 }
 
@@ -495,6 +861,27 @@ export async function getAdminRecentOrders(user: User, take = 5) {
   }));
 }
 
+export async function getAdminAllOrders(user: User) {
+  const orders = await prisma.order.findMany({
+    where: await adminOrderScope(user),
+    orderBy: { createdAt: "desc" },
+    include: { user: true },
+  });
+  return orders.map((o) => ({
+    id: o.id,
+    course: o.course,
+    courseId: o.courseId,
+    amount: o.amount,
+    status: o.status,
+    planName: o.planName,
+    razorpayOrderId: o.razorpayOrderId,
+    razorpayPaymentId: o.razorpayPaymentId,
+    createdAt: o.createdAt.toISOString(),
+    userName: o.user.name,
+    userEmail: o.user.email,
+  }));
+}
+
 export async function getAdminRecentUsers(take = 5) {
   const users = await prisma.user.findMany({
     where: { role: "student" },
@@ -507,4 +894,44 @@ export async function getAdminRecentUsers(take = 5) {
     email: (u as any).email ?? null,
     createdAt: (u as any).createdAt.toISOString(),
   }));
+}
+
+/* ─── Notifications ─────────────────────────────────────────── */
+
+/** Unread count for the topbar bell and the sidebar badge. */
+export async function getUnreadNotificationCount(userId: string): Promise<number> {
+  return prisma.notification.count({ where: { userId, readAt: null } });
+}
+
+/**
+ * A page of this user's notifications, newest first.
+ *
+ * `take` is one more than the caller asked for so the page can tell whether a
+ * "load more" cursor exists without a second count query.
+ */
+export async function getNotifications(
+  userId: string,
+  { take = 50 }: { take?: number } = {},
+): Promise<{ items: AppNotification[]; unread: number }> {
+  const [rows, unread] = await Promise.all([
+    prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take,
+    }),
+    getUnreadNotificationCount(userId),
+  ]);
+
+  return {
+    unread,
+    items: rows.map((n) => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      body: n.body,
+      href: n.href,
+      read: n.readAt !== null,
+      createdAt: n.createdAt.toISOString(),
+    })),
+  };
 }

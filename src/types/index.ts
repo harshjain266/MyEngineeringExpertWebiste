@@ -15,7 +15,7 @@ export interface Instructor {
   userId?: string;
   name: string;
   title: string;
-  avatar: string;
+  avatar: string | null;
   bio?: string;
   qualifications?: string;
   experience?: string;
@@ -38,7 +38,7 @@ export interface Course {
   durationHours: number;
   lectures: number;
   language: string;
-  thumbnail: string;
+  thumbnail: string | null;
   badge?: string;
   tags: string[];
   plannerUrl?: string;
@@ -64,6 +64,10 @@ export interface LiveClass {
   endsAt: string; // ISO
   status: "Upcoming" | "Live" | "Ongoing" | "Completed";
   courseId?: string | null;
+  /** True when no course is attached: free, open to every student. */
+  isMasterClass?: boolean;
+  /** Present on batch classes loaded with their course. */
+  course?: { title: string; slug: string } | null;
 }
 
 export interface Announcement {
@@ -153,6 +157,110 @@ export interface ExamCategory {
   accent: string; // tailwind gradient classes
 }
 
+/* ─── Approval workflow ─────────────────────────────────────── */
+
+export type ApprovalStatus = "pending" | "approved" | "rejected";
+
+/** Shared review metadata rendered by the approval queue cards. */
+export interface ReviewMeta {
+  approvalStatus: ApprovalStatus;
+  reviewNote?: string | null;
+  reviewedAt?: string | null;
+  reviewerName?: string | null;
+  submittedByName?: string | null;
+}
+
+export interface PendingCourse extends ReviewMeta {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  program: string;
+  level: Level;
+  price: number;
+  originalPrice: number;
+  durationHours: number;
+  lectures: number;
+  language: string;
+  thumbnail?: string | null;
+  badge?: string | null;
+  startsOn?: string | null;
+  endsOn?: string | null;
+  instructorName: string;
+  createdAt: string;
+}
+
+export interface PendingLiveClass extends ReviewMeta {
+  id: string;
+  title: string;
+  topic: string;
+  subject?: string | null;
+  meetingUrl?: string | null;
+  startsAt: string;
+  endsAt: string;
+  instructorName: string;
+  courseTitle?: string | null;
+  createdAt: string;
+}
+
+export interface PendingBlog extends ReviewMeta {
+  id: string;
+  slug: string;
+  title: string;
+  subject: string;
+  excerpt?: string | null;
+  content: string;
+  tags: string[];
+  featuredImage?: string | null;
+  featured: boolean;
+  readMinutes: number;
+  authorName: string;
+  createdAt: string;
+}
+
+/* ─── Study material ────────────────────────────────────────── */
+
+export type MaterialKind = "note" | "assignment" | "slide" | "reference" | "link";
+
+export interface StudyMaterial {
+  id: string;
+  courseId: string;
+  /** Set when the material is loaded outside a single-course context. */
+  courseTitle?: string;
+  courseSlug?: string;
+  title: string;
+  description?: string | null;
+  kind: MaterialKind;
+  url: string;
+  fileName?: string | null;
+  fileSize?: number | null;
+  mimeType?: string | null;
+  uploadedByName: string;
+  createdAt: string;
+}
+
+/* ─── Notifications ─────────────────────────────────────────── */
+
+export type NotificationType =
+  | "master_class"
+  | "live_class"
+  | "material"
+  | "blog"
+  | "approval"
+  | "decision"
+  | "order"
+  | "system";
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  href?: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
 /* ─── Blog types ────────────────────────────────────────────── */
 
 export interface Blog {
@@ -168,6 +276,10 @@ export interface Blog {
   authorName: string;
   authorAvatar?: string;
   authorInstructorId?: string | null;
+  excerpt?: string | null;
+  readMinutes?: number;
+  views?: number;
+  featured?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -220,4 +332,25 @@ export interface AdminCourse {
   instructorName: string;
   enrollmentCount: number;
   createdAt: string;
+  startsOn?: string | null;
+  endsOn?: string | null;
+  approvalStatus: ApprovalStatus;
+  reviewNote?: string | null;
+}
+
+export interface AdminLiveClass {
+  id: string;
+  title: string;
+  topic: string;
+  subject?: string | null;
+  meetingUrl?: string | null;
+  startsAt: string;
+  endsAt: string;
+  status: "Upcoming" | "Live" | "Ongoing" | "Completed";
+  instructorId: string;
+  instructorName: string;
+  courseId?: string | null;
+  courseTitle?: string | null;
+  approvalStatus: ApprovalStatus;
+  reviewNote?: string | null;
 }

@@ -3,7 +3,8 @@ import Razorpay from "razorpay";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
+import { buildCourseDetail } from "@/lib/course-detail";
+import type { Course } from "@/types";
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
@@ -24,9 +25,60 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    /* COMMENTED OUT RAZORPAY INTEGRATION FOR TESTING
+    // Never let a client charge itself an arbitrary price, and never sell a
+    // course that is hidden or still waiting on approval.
+    let chargeable = Math.round(amount);
+    if (courseId) {
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        select: {
+          price: true,
+          disabled: true,
+          approvalStatus: true,
+          instructor: true,
+          id: true,
+          slug: true,
+          title: true,
+          category: true,
+          level: true,
+          originalPrice: true,
+          rating: true,
+          ratingCount: true,
+          durationHours: true,
+          lectures: true,
+          language: true,
+          thumbnail: true,
+          tags: true,
+          program: true,
+        },
+      });
+
+      if (!course) {
+        return NextResponse.json({ error: "Course not found" }, { status: 404 });
+      }
+      if (course.disabled || course.approvalStatus !== "approved") {
+        return NextResponse.json(
+          { error: "This course is not available for purchase right now." },
+          { status: 409 },
+        );
+      }
+
+      const plans = buildCourseDetail(course as unknown as Course).plans;
+      const plan =
+        plans.find((p) => p.name === (planName ?? "Batch")) ??
+        plans.find((p) => p.price === chargeable);
+
+      if (!plan || plan.price !== chargeable) {
+        return NextResponse.json(
+          { error: "That price is no longer valid. Please reload the page." },
+          { status: 409 },
+        );
+      }
+      chargeable = plan.price;
+    }
+
     // Amount in paise (Razorpay requires smallest currency unit)
-    const amountPaise = Math.round(amount * 100);
+    const amountPaise = Math.round(chargeable * 100);
 
     const razorpayOrder = await razorpay.orders.create({
       amount: amountPaise,
@@ -43,7 +95,7 @@ export async function POST(req: Request) {
     await prisma.order.create({
       data: {
         userId,
-        amount,
+        amount: chargeable,
         status: "Pending",
         course: courseTitle,
         courseId: courseId ?? null,
@@ -57,37 +109,6 @@ export async function POST(req: Request) {
       amount: amountPaise,
       currency: "INR",
       keyId: process.env.RAZORPAY_KEY_ID,
-    });
-    */
-
-    // DUMMY ENROLLMENT FOR TESTING
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // 1. Create a successful order record
-      await tx.order.create({
-        data: {
-          userId,
-          amount,
-          status: "Success",
-          course: courseTitle,
-          courseId: courseId ?? null,
-          planName: planName ?? "Batch",
-          razorpayOrderId: `dummy_${Date.now()}`,
-          razorpayPaymentId: `pay_dummy_${Date.now()}`,
-        },
-      });
-
-      // 2. Create the enrollment
-      if (courseId) {
-        await tx.enrollment.upsert({
-          where: { userId_courseId: { userId, courseId } },
-          create: { userId, courseId, progress: 0 },
-          update: {},
-        });
-      }
-    });
-
-    return NextResponse.json({
-      dummySuccess: true,
     });
   } catch (err: any) {
     console.error("create-order error:", err);

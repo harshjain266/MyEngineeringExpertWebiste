@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { CalendarDays, Clock, Users, Video } from "lucide-react";
 import type { LiveClass } from "@/types";
@@ -8,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MasterClassBadge } from "@/components/ui/master-class-badge";
 import { SectionHeader } from "@/components/dashboard/section-header";
+import { avatarImage } from "@/lib/utils";
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-IN", {
@@ -23,16 +25,26 @@ function formatDate(iso: string) {
   });
 }
 
-export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
+export function LiveClassPanel({
+  liveClasses,
+  title = "Upcoming Live Class",
+  emptyTitle = "No live classes scheduled",
+  viewAllHref = "/dashboard/live-classes",
+}: {
+  liveClasses: LiveClass[];
+  title?: string;
+  emptyTitle?: string;
+  viewAllHref?: string;
+}) {
   if (!liveClasses || liveClasses.length === 0) {
     return (
       <div className="rounded-none border border-surface-muted bg-white p-4">
-        <SectionHeader title="Live Classes" viewAllHref="/dashboard/live-classes" />
+        <SectionHeader title={title} viewAllHref={viewAllHref} />
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-surface-subtle text-ink-muted">
             <Video size={24} />
           </div>
-          <p className="mt-3 text-sm font-medium text-ink">No live classes scheduled</p>
+          <p className="mt-3 text-sm font-medium text-ink">{emptyTitle}</p>
           <p className="text-xs text-ink-muted">Check back later for updates</p>
         </div>
       </div>
@@ -48,7 +60,7 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
 
   return (
     <div className="rounded-none border border-surface-muted bg-white p-4">
-      <SectionHeader title="Upcoming Live Class" viewAllHref="/dashboard/live-classes" />
+      <SectionHeader title={title} viewAllHref={viewAllHref} />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.97 }}
@@ -58,7 +70,7 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
       >
         <div className="flex items-start gap-3">
           <Image
-            src={featured.instructor.avatar || "https://i.pravatar.cc/120?img=1"}
+            src={avatarImage(featured.instructor.avatar, featured.instructor.name)}
             alt={featured.instructor.name}
             width={48}
             height={48}
@@ -66,7 +78,13 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <MasterClassBadge />
+              {featured.isMasterClass ? (
+                <MasterClassBadge />
+              ) : (
+                <Badge variant="brand" className="rounded-none">
+                  {featured.course?.title ?? "My Batch"}
+                </Badge>
+              )}
               {featuredJoinable ? (
                 <Badge variant="live" className="gap-1 rounded-none">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> LIVE
@@ -106,9 +124,18 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
           >
             {featuredJoinable ? "Join Now" : "Locked"}
           </Button>
-          <Button variant="secondary" size="sm" className="flex-1 rounded-none">
-            <Video size={15} /> Details
-          </Button>
+          <Link
+            href={
+              featured.isMasterClass
+                ? "/dashboard/live-classes"
+                : `/dashboard/my-courses/${featured.course?.slug ?? ""}`
+            }
+            className="flex-1"
+          >
+            <Button variant="secondary" size="sm" className="w-full rounded-none">
+              <Video size={15} /> Details
+            </Button>
+          </Link>
         </div>
       </motion.div>
 
@@ -119,7 +146,7 @@ export function LiveClassPanel({ liveClasses }: { liveClasses: LiveClass[] }) {
           return (
           <li key={c.id} className="flex items-center gap-3">
             <Image 
-              src={c.instructor.avatar || "https://i.pravatar.cc/120?img=1"} 
+              src={avatarImage(c.instructor.avatar, c.instructor.name)} 
               alt={c.instructor.name} 
               width={36} 
               height={36} 

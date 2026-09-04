@@ -39,6 +39,9 @@ export default async function EditBlogPage({
         tags: blog.tags,
         published: blog.published,
         featuredImage: blog.featuredImage ?? "",
+        excerpt: blog.excerpt ?? "",
+        approvalStatus: blog.approvalStatus,
+        reviewNote: blog.reviewNote,
       }}
       slug={slug}
     />

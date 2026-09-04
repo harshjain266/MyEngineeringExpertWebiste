@@ -8,7 +8,7 @@ import { BookOpen, Clock, PlayCircle } from "lucide-react";
 import type { Course } from "@/types";
 import { Button } from "@/components/ui/button";
 import { BuyNowButton } from "./buy-now-button";
-import { formatINR } from "@/lib/utils";
+import { avatarImage, courseImage, formatINR } from "@/lib/utils";
 
 export function CourseCard({ course, index = 0 }: { course: Course; index?: number }) {
   const pathname = usePathname();
@@ -25,7 +25,7 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
       <Link href={`/courses/${course.slug}`} className="relative block aspect-[16/10] overflow-hidden">
         {course.thumbnail ? (
           <Image
-            src={course.thumbnail}
+            src={courseImage(course.thumbnail)}
             alt={course.title}
             fill
             sizes="(max-width: 768px) 100vw, 320px"
@@ -56,7 +56,7 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
         >
           {course.instructor.avatar ? (
             <Image
-              src={course.instructor.avatar}
+              src={avatarImage(course.instructor.avatar, course.instructor.name)}
               alt={course.instructor.name}
               width={20}
               height={20}

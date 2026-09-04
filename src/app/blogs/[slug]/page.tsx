@@ -1,11 +1,39 @@
 import Link from "next/link";
-import { Calendar, Clock, User } from "lucide-react";
+import { ArrowRight, Calendar, Clock, Eye, User } from "lucide-react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { PUBLIC_BLOG_FILTER } from "@/lib/data";
+import { buildExcerpt } from "@/lib/blog";
 import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/ui/back-button";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const blog = await prisma.blog.findFirst({
+    where: { slug, ...PUBLIC_BLOG_FILTER },
+    select: { title: true, excerpt: true, content: true, featuredImage: true },
+  });
+
+  if (!blog) return { title: "Blog" };
+
+  const description = buildExcerpt(blog.content, blog.excerpt, 160);
+  return {
+    title: blog.title,
+    description,
+    openGraph: {
+      title: blog.title,
+      description,
+      type: "article",
+      ...(blog.featuredImage?.startsWith("http") ? { images: [blog.featuredImage] } : {}),
+    },
+  };
+}
 
 export default async function PublicBlogDetailPage({
   params,
@@ -14,14 +42,26 @@ export default async function PublicBlogDetailPage({
 }) {
   const { slug } = await params;
 
-  const blog = await prisma.blog.findUnique({
-    where: { slug, published: true },
+  const blog = await prisma.blog.findFirst({
+    where: { slug, ...PUBLIC_BLOG_FILTER },
     include: {
       author: { select: { name: true, avatar: true, instructor: { select: { id: true } } } },
     },
   });
 
   if (!blog) notFound();
+
+  // Best-effort view counter; a failed increment must never 500 the article.
+  prisma.blog
+    .update({ where: { id: blog.id }, data: { views: { increment: 1 } } })
+    .catch((err) => console.error("blog view increment failed:", err));
+
+  const related = await prisma.blog.findMany({
+    where: { ...PUBLIC_BLOG_FILTER, subject: blog.subject, id: { not: blog.id } },
+    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+    take: 3,
+    select: { slug: true, title: true, excerpt: true, readMinutes: true },
+  });
 
   const authorInstructorId = blog.author.instructor?.id;
 
@@ -64,9 +104,20 @@ export default async function PublicBlogDetailPage({
             </span>
             <span className="flex items-center gap-1.5">
               <Clock size={15} />
-              {getReadingTime(blog.content)} min read
+              {blog.readMinutes} min read
             </span>
+            {blog.views > 0 && (
+              <span className="flex items-center gap-1.5">
+                <Eye size={15} />
+                {blog.views.toLocaleString("en-IN")} reads
+              </span>
+            )}
           </div>
+          {blog.excerpt && (
+            <p className="mt-5 border-l-4 border-brand-500 bg-white/60 py-2 pl-4 text-base leading-7 text-ink-soft">
+              {blog.excerpt}
+            </p>
+          )}
           {blog.tags.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
               {blog.tags.map((tag: string) => (
@@ -92,13 +143,32 @@ export default async function PublicBlogDetailPage({
             dangerouslySetInnerHTML={{ __html: blog.content }}
           />
         </div>
+
+        {related.length > 0 && (
+          <section className="mt-10">
+            <h2 className="font-display text-xl font-bold text-ink">Keep reading</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              {related.map((post) => (
+                <Link
+                  key={post.slug}
+                  href={`/blogs/${post.slug}`}
+                  className="group flex flex-col rounded-2xl border border-surface-muted bg-white p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-card"
+                >
+                  <h3 className="line-clamp-2 font-display text-base font-bold text-ink group-hover:text-brand-700">
+                    {post.title}
+                  </h3>
+                  {post.excerpt && (
+                    <p className="mt-2 line-clamp-3 text-sm text-ink-muted">{post.excerpt}</p>
+                  )}
+                  <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-brand-700">
+                    {post.readMinutes} min read <ArrowRight size={13} />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </article>
     </div>
   );
-}
-
-function getReadingTime(html: string): number {
-  const text = html.replace(/<[^>]*>/g, "");
-  const words = text.split(/\s+/).length;
-  return Math.max(1, Math.ceil(words / 200));
 }

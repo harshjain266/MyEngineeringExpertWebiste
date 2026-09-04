@@ -5,6 +5,7 @@ import { CalendarDays, Clock, Radio, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MasterClassBadge } from "@/components/ui/master-class-badge";
+import { avatarImage } from "@/lib/utils";
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-IN", {
@@ -32,8 +33,14 @@ export function LiveClassCard({ item, isLive }: { item: any; isLive?: boolean })
         <div className="absolute inset-0 flex items-center justify-center">
           <Radio size={48} className={isLive ? "text-rose-500 animate-pulse" : "text-brand-200"} />
         </div>
-        <div className="absolute left-3 top-3 flex items-center gap-2">
-          {!item.courseId && <MasterClassBadge />}
+        <div className="absolute left-3 top-3 flex flex-wrap items-center gap-2">
+          {item.isMasterClass ?? !item.courseId ? (
+            <MasterClassBadge />
+          ) : (
+            <Badge variant="brand" className="rounded-none">
+              {item.course?.title ?? "My Batch"}
+            </Badge>
+          )}
           {canJoin ? (
             <Badge variant="live" className="gap-1 rounded-none">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> LIVE
@@ -49,6 +56,11 @@ export function LiveClassCard({ item, isLive }: { item: any; isLive?: boolean })
           {item.title}
         </h3>
         <p className="mt-1 text-sm text-ink-muted">{item.topic}</p>
+        {item.subject ? (
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-brand-600">
+            {item.subject}
+          </p>
+        ) : null}
 
         <div className="mt-6 space-y-3">
           <div className="flex items-center gap-3 text-sm text-ink-soft">
@@ -65,7 +77,7 @@ export function LiveClassCard({ item, isLive }: { item: any; isLive?: boolean })
           </div>
           <div className="flex items-center gap-3 text-sm text-ink-soft">
             <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-none">
-              <Image src={item.instructor.avatar} alt={item.instructor.name} fill className="object-cover" />
+              <Image src={avatarImage(item.instructor.avatar, item.instructor.name)} alt={item.instructor.name} fill className="object-cover" />
             </div>
             <span>{item.instructor.name}</span>
           </div>

@@ -14,6 +14,7 @@ import { SiteHeader } from "@/components/landing/site-header";
 import { Footer } from "@/components/landing/footer";
 import { Badge } from "@/components/ui/badge";
 import { compactNumber, initials } from "@/lib/utils";
+import { avatarImage } from "@/lib/utils";
 
 type _TeacherCourse = { id: string; title: string; disabled: boolean };
 type _TeacherInstructor = { id: string; name: string; avatar: string | null; title: string | null; bio: string | null; qualifications: string | null; experience: string | null; students: number; courses: _TeacherCourse[] };
@@ -108,7 +109,7 @@ export default async function TeachersPage() {
                         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-soft">
                           {instructor.avatar ? (
                             <Image
-                              src={instructor.avatar}
+                              src={avatarImage(instructor.avatar, instructor.name)}
                               alt={instructor.name}
                               fill
                               sizes="64px"

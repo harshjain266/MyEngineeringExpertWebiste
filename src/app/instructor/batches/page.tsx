@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { compactNumber } from "@/lib/utils";
+import { compactNumber, courseImage } from "@/lib/utils";
 
 type _LiveClass = { id: string; title: string; topic: string; status: string; startsAt: Date; endsAt: Date; meetingUrl: string | null; courseId: string | null };
 type _BatchCourse = { id: string; slug: string; title: string; thumbnail: string | null; category: string; level: string; durationHours: number | null; lectures: number | null; liveClasses: _LiveClass[]; _count: { enrollments: number; liveClasses: number } };
@@ -106,7 +106,7 @@ export default async function InstructorBatchesPage() {
                 <div className="relative min-h-56 bg-brand-50 md:min-h-full">
                   {course.thumbnail ? (
                     <Image
-                      src={course.thumbnail}
+                      src={courseImage(course.thumbnail)}
                       alt={course.title}
                       fill
                       sizes="(max-width: 768px) 100vw, 220px"

@@ -3,6 +3,7 @@ import { Inter, Sora } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/session-provider";
 import { AuthModalProvider } from "@/components/auth/auth-modal";
+import { VisitTracker } from "@/components/analytics/visit-tracker";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -54,7 +55,10 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${sora.variable}`}>
       <body className="min-h-screen font-sans">
         <AuthProvider>
-          <AuthModalProvider>{children}</AuthModalProvider>
+          <AuthModalProvider>
+            <VisitTracker />
+            {children}
+          </AuthModalProvider>
         </AuthProvider>
       </body>
     </html>

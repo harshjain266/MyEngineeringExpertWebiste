@@ -1,19 +1,20 @@
 import { prisma } from "@/lib/db";
+import { PUBLIC_BLOG_FILTER } from "@/lib/data";
 import BlogsPageClient from "./blogs-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function PublicBlogsPage() {
   const subjects = await prisma.blog.findMany({
-    where: { published: true },
+    where: PUBLIC_BLOG_FILTER,
     select: { subject: true },
     distinct: ["subject"],
     orderBy: { subject: "asc" },
   });
 
   const blogs = await prisma.blog.findMany({
-    where: { published: true },
-    orderBy: { createdAt: "desc" },
+    where: PUBLIC_BLOG_FILTER,
+    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
     include: {
       author: { select: { name: true, avatar: true, instructor: { select: { id: true } } } },
     },
@@ -32,6 +33,10 @@ export default async function PublicBlogsPage() {
     authorName: b.author.name,
     authorAvatar: b.author.avatar ?? undefined,
     authorInstructorId: b.author.instructor?.id ?? null,
+    excerpt: b.excerpt,
+    readMinutes: b.readMinutes,
+    views: b.views,
+    featured: b.featured,
     createdAt: b.createdAt.toISOString(),
     updatedAt: b.updatedAt.toISOString(),
   }));

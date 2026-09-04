@@ -1,8 +1,23 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Video, Calendar, Clock, User, ExternalLink } from "lucide-react";
-import { getCourseBySlug, getLiveClassesByCourse } from "@/lib/data";
+import {
+  Video,
+  Calendar,
+  Clock,
+  User,
+  ExternalLink,
+  ArrowRight,
+  FileStack,
+} from "lucide-react";
+import {
+  getCourseBySlug,
+  getLiveClassesByCourse,
+  getCourseMaterialsForStudent,
+} from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+
+export const dynamic = "force-dynamic";
 
 interface Params {
   params: Promise<{ slug: string }>;
@@ -10,11 +25,17 @@ interface Params {
 
 export default async function CourseLiveClassesPage({ params }: Params) {
   const { slug } = await params;
-  const course = await getCourseBySlug(slug);
-  
+  // Enrollment (not catalogue visibility) gates this page, so a student keeps
+  // access to a course they paid for even if it is later pulled or unapproved.
+  const course = await getCourseBySlug(slug, false);
+
   if (!course) notFound();
 
-  const liveClasses = await getLiveClassesByCourse(course.id);
+  const [liveClasses, materials] = await Promise.all([
+    getLiveClassesByCourse(course.id),
+    getCourseMaterialsForStudent(course.id),
+  ]);
+  const materialCount = materials.length;
 
   // Group by subject
   const groupedBySubject = liveClasses.reduce((acc, curr) => {
@@ -35,6 +56,30 @@ export default async function CourseLiveClassesPage({ params }: Params) {
           7 Days Schedule
         </Badge>
       </div>
+
+      {/* Study material lives on its own page so this screen stays focused on
+          the live schedule. */}
+      <Link
+        href={`/dashboard/materials?course=${course.slug}`}
+        className="group flex flex-wrap items-center gap-4 rounded-3xl border border-surface-muted bg-white p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-card"
+      >
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700">
+          <FileStack size={22} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-lg font-bold text-ink group-hover:text-brand-700">
+            Study Material
+          </h2>
+          <p className="mt-0.5 text-sm text-ink-muted">
+            {materialCount === 0
+              ? "Your teacher has not uploaded anything for this course yet."
+              : `${materialCount} file${materialCount === 1 ? "" : "s"} shared by your teacher — notes, assignments and slides.`}
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1.5 text-sm font-bold text-brand-700">
+          Open library <ArrowRight size={15} />
+        </span>
+      </Link>
 
       {liveClasses.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-surface-muted bg-white py-20 text-center">

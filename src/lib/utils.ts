@@ -47,3 +47,37 @@ export function initials(name: string) {
     .join("")
     .toUpperCase();
 }
+
+/**
+ * Image-source guards.
+ *
+ * `next/image` warns (and refetches the whole page) when `src` is an empty
+ * string, and several DB columns behind these images are nullable even though
+ * older types claimed otherwise. Route every `<Image src>` through one of these.
+ */
+
+/** Inline SVG placeholder — no network request, works offline and in emails. */
+export const COURSE_PLACEHOLDER =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#eef2ff"/><stop offset="100%" stop-color="#e0e7ff"/>
+      </linearGradient></defs>
+      <rect width="640" height="360" fill="url(#g)"/>
+      <g fill="none" stroke="#a5b4fc" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M250 150h140v90H250z"/><path d="M250 150l70-40 70 40"/>
+      </g>
+    </svg>`,
+  );
+
+/** Course/lesson artwork with a safe fallback. */
+export function courseImage(thumbnail?: string | null) {
+  return thumbnail && thumbnail.trim() ? thumbnail : COURSE_PLACEHOLDER;
+}
+
+/** Avatar with a deterministic fallback derived from the person's name. */
+export function avatarImage(avatar?: string | null, seed = "user") {
+  if (avatar && avatar.trim()) return avatar;
+  return `https://i.pravatar.cc/160?u=${encodeURIComponent(seed)}`;
+}

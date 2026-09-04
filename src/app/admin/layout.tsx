@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/roles";
+import { getPendingApprovalCount, getUnreadNotificationCount } from "@/lib/data";
 import { DashboardShell } from "@/components/dashboard/shell";
 
 export default async function AdminLayout({
@@ -14,5 +15,18 @@ export default async function AdminLayout({
     redirect("/dashboard");
   }
 
-  return <DashboardShell user={user}>{children}</DashboardShell>;
+  const [pendingApprovals, unreadCount] = await Promise.all([
+    getPendingApprovalCount(user),
+    getUnreadNotificationCount(user.id),
+  ]);
+
+  return (
+    <DashboardShell
+      user={user}
+      unreadCount={unreadCount}
+      badges={pendingApprovals > 0 ? { "/admin/approvals": pendingApprovals } : undefined}
+    >
+      {children}
+    </DashboardShell>
+  );
 }

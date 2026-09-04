@@ -1,4 +1,5 @@
 import type { Course, CourseDetail } from "@/types";
+import { avatarImage } from "@/lib/utils";
 
 /**
  * Derives PW-style course-detail content (plans, schedule, teachers, tabs …)
@@ -62,7 +63,7 @@ export function buildCourseDetail(course: Course): CourseDetail {
       name: course.instructor.name,
       subject: course.instructor.title,
       exp: "12+ Years Exp",
-      avatar: course.instructor.avatar,
+      avatar: avatarImage(course.instructor.avatar, course.instructor.name),
     },
   ];
 

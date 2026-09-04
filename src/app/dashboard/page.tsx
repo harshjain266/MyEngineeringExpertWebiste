@@ -7,6 +7,7 @@ import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { ContinueLearning } from "@/components/dashboard/continue-learning";
 import { LiveClassPanel } from "@/components/dashboard/live-class-panel";
+import { MasterClassAlert } from "@/components/dashboard/master-class-alert";
 import { AnnouncementsPanel } from "@/components/dashboard/announcements-panel";
 import { SectionHeader } from "@/components/dashboard/section-header";
 import { CourseCard } from "@/components/course/course-card";
@@ -25,6 +26,11 @@ export default async function DashboardPage() {
         {/* Main column */}
         <div className="space-y-6">
           <WelcomeBanner user={user} stats={data.stats} />
+
+          {/* Master classes are free for every student, so they get a
+              dashboard-level notification rather than only a side panel. */}
+          <MasterClassAlert classes={data.masterClasses} />
+
           <QuickActions />
 
           <section>
@@ -44,7 +50,18 @@ export default async function DashboardPage() {
 
         {/* Right rail */}
         <aside className="space-y-6">
-          <LiveClassPanel liveClasses={data.liveClasses} />
+          <LiveClassPanel
+            liveClasses={data.batchClasses}
+            title="Your Batch Classes"
+            emptyTitle="No batch classes scheduled"
+            viewAllHref="/dashboard/live-classes"
+          />
+          <LiveClassPanel
+            liveClasses={data.masterClasses}
+            title="Free Master Classes"
+            emptyTitle="No master classes scheduled"
+            viewAllHref="/dashboard/live-classes"
+          />
           <AnnouncementsPanel items={data.announcements} />
         </aside>
       </div>

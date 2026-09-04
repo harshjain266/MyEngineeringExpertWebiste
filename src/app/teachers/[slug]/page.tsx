@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/landing/site-header";
 import { Footer } from "@/components/landing/footer";
 import { Badge } from "@/components/ui/badge";
 import { Stars } from "@/components/ui/stars";
+import { avatarImage, courseImage } from "@/lib/utils";
 
 type _TeacherCourse = { id: string; slug: string; title: string; thumbnail: string | null; level: string; disabled: boolean };
 
@@ -74,7 +75,7 @@ export default async function TeacherProfilePage({
           <div className="grid gap-8 lg:grid-cols-[auto_1fr_auto] lg:items-center">
             <div className="relative h-36 w-36 overflow-hidden rounded-3xl bg-brand-50 shadow-card ring-4 ring-white md:h-44 md:w-44">
             <Image
-              src={instructor.avatar || "https://i.pravatar.cc/300"}
+              src={avatarImage(instructor.avatar, instructor.name)}
               alt={instructor.name}
               fill
               className="object-cover"
@@ -199,7 +200,7 @@ export default async function TeacherProfilePage({
                     <div className="flex items-center gap-4 rounded-3xl border border-surface-muted bg-white p-4 shadow-soft transition-colors group-hover:border-brand-300 group-hover:bg-brand-50/40">
                       <div className="relative w-16 h-16 rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
                         {course.thumbnail ? (
-                          <Image src={course.thumbnail} alt={course.title} fill className="object-cover" />
+                          <Image src={courseImage(course.thumbnail)} alt={course.title} fill className="object-cover" />
                         ) : (
                           <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold">
                             {course.title.charAt(0)}

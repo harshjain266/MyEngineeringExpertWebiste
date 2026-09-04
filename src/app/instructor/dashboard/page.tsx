@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { compactNumber } from "@/lib/utils";
 import ProfileForm from "@/app/instructor/settings/profile/profile-form";
 import { StartClassButton } from "@/components/instructor/start-class-button";
+import { avatarImage, courseImage } from "@/lib/utils";
 
 type _LiveClass = { id: string; title: string; topic: string; status: string; startsAt: Date; endsAt: Date; meetingUrl: string | null; courseId: string | null };
 type _BatchCourse = { id: string; slug: string; title: string; thumbnail: string | null; category: string; durationHours: number | null; liveClasses: _LiveClass[]; _count: { enrollments: number; liveClasses: number } };
@@ -222,7 +223,7 @@ export default async function InstructorDashboardPage() {
                     <div className="relative aspect-[16/8] bg-brand-50">
                       {course.thumbnail ? (
                         <Image
-                          src={course.thumbnail}
+                          src={courseImage(course.thumbnail)}
                           alt={course.title}
                           fill
                           sizes="(max-width: 768px) 100vw, 420px"
@@ -264,7 +265,7 @@ export default async function InstructorDashboardPage() {
               <div className="relative h-16 w-16 overflow-hidden rounded-2xl bg-brand-50">
                 {instructor?.avatar || user.avatar ? (
                   <Image
-                    src={instructor?.avatar || user.avatar}
+                    src={avatarImage(instructor?.avatar ?? user.avatar, user.name)}
                     alt={instructor?.name || user.name}
                     fill
                     className="object-cover"

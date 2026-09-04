@@ -19,7 +19,7 @@ import type { Course, CourseDetail } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BuyNowButton } from "@/components/course/buy-now-button";
-import { formatINR } from "@/lib/utils";
+import { avatarImage, courseImage, formatINR } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -184,7 +184,7 @@ export function CourseDetailView({
           <div className="overflow-hidden rounded-2xl border border-surface-muted bg-white shadow-card">
             <div className="relative aspect-[16/9]">
               <Image
-                src={course.thumbnail}
+                src={courseImage(course.thumbnail)}
                 alt={course.title}
                 fill
                 sizes="360px"
@@ -481,7 +481,7 @@ function TeachersPanel({ course, detail }: { course: Course; detail: CourseDetai
         >
           <div className="relative h-20 w-20 overflow-hidden rounded-full ring-4 ring-white">
             <Image
-              src={course.instructor.avatar}
+              src={avatarImage(course.instructor.avatar, course.instructor.name)}
               alt={course.instructor.name}
               fill
               sizes="80px"

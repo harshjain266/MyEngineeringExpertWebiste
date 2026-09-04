@@ -15,6 +15,18 @@ enum Program {
   web_dev
 }
 
+/// Moderation state for content that must be reviewed before students see it.
+///
+/// NOTE: the column default is `approved` on purpose. Every code path that
+/// creates content sets this field explicitly, so the default only ever applies
+/// to rows that already existed when this column was added — those must stay
+/// visible instead of silently disappearing from the catalogue on deploy.
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
 model User {
   id                      String                   @id @default(uuid())
   name                    String                   @default("Student")
@@ -36,7 +48,14 @@ model User {
   orders                  Order[]
   wishlist                Wishlist[]
   blogs                   Blog[]
-  managedInstructors      Instructor[]              @relation("ManagedInstructors")
+  managedInstructors      Instructor[]             @relation("ManagedInstructors")
+  submittedCourses        Course[]                 @relation("CourseSubmittedBy")
+  reviewedCourses         Course[]                 @relation("CourseReviewedBy")
+  submittedLiveClasses    LiveClass[]              @relation("LiveClassSubmittedBy")
+  reviewedLiveClasses     LiveClass[]              @relation("LiveClassReviewedBy")
+  reviewedBlogs           Blog[]                   @relation("BlogReviewedBy")
+  uploadedMaterials       StudyMaterial[]
+  notifications           Notification[]
 }
 
 model EmailVerificationToken {
@@ -82,35 +101,47 @@ model Instructor {
 }
 
 model Course {
-  id            String       @id @default(uuid())
-  slug          String       @unique
+  id            String          @id @default(uuid())
+  slug          String          @unique
   title         String
   category      String
-  level         Level        @default(Beginner)
+  level         Level           @default(Beginner)
   price         Int
   originalPrice Int
-  rating        Float        @default(0)
-  ratingCount   Int          @default(0)
-  durationHours Int          @default(0)
-  lectures      Int          @default(0)
-  language      String       @default("English")
+  rating        Float           @default(0)
+  ratingCount   Int             @default(0)
+  durationHours Int             @default(0)
+  lectures      Int             @default(0)
+  language      String          @default("English")
   thumbnail     String?
   badge         String?
   tags          String[]
-  createdAt     DateTime     @default(now())
+  createdAt     DateTime        @default(now())
+  startsOn      DateTime?
+  endsOn        DateTime?
   instructorId  String
-  program       Program      @default(btech_bca)
+  program       Program         @default(btech_bca)
   plannerUrl    String?
-  popular       Boolean      @default(false)
-  disabled      Boolean      @default(false)
-  instructor    Instructor   @relation(fields: [instructorId], references: [id])
+  popular       Boolean         @default(false)
+  disabled      Boolean         @default(false)
+  instructor    Instructor      @relation(fields: [instructorId], references: [id])
   enrollments   Enrollment[]
   lessons       Lesson[]
   liveClasses   LiveClass[]
   wishlist      Wishlist[]
+  materials     StudyMaterial[]
+
+  approvalStatus ApprovalStatus @default(approved)
+  reviewNote     String?
+  reviewedAt     DateTime?
+  submittedById  String?
+  submittedBy    User?          @relation("CourseSubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedById   String?
+  reviewedBy     User?          @relation("CourseReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([category, level])
   @@index([program])
+  @@index([approvalStatus])
 }
 
 model Lesson {
@@ -159,6 +190,47 @@ model LiveClass {
   courseId     String?
   course       Course?    @relation(fields: [courseId], references: [id])
   instructor   Instructor @relation(fields: [instructorId], references: [id])
+
+  createdAt      DateTime       @default(now())
+  approvalStatus ApprovalStatus @default(approved)
+  reviewNote     String?
+  reviewedAt     DateTime?
+  submittedById  String?
+  submittedBy    User?          @relation("LiveClassSubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedById   String?
+  reviewedBy     User?          @relation("LiveClassReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([approvalStatus])
+  @@index([courseId, startsAt])
+}
+
+/// Course material a teacher shares with students who bought that course.
+model StudyMaterial {
+  id           String       @id @default(uuid())
+  courseId     String
+  course       Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  kind         MaterialKind @default(note)
+  /// Data URL for uploaded files, or an external https link for `kind = link`.
+  url          String
+  fileName     String?
+  fileSize     Int?
+  mimeType     String?
+  uploadedById String
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([courseId, createdAt])
+}
+
+enum MaterialKind {
+  note
+  assignment
+  slide
+  reference
+  link
 }
 
 model Wishlist {
@@ -204,21 +276,42 @@ model Announcement {
 }
 
 model Blog {
-  id            String     @id @default(uuid())
+  id            String   @id @default(uuid())
   title         String
-  slug          String     @unique
+  slug          String   @unique
   content       String
   subject       String
   featuredImage String?
   tags          String[]
-  published     Boolean    @default(false)
+  published     Boolean  @default(false)
   authorId      String
-  author        User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  /// Short teaser rendered on blog cards and used as the meta description.
+  excerpt     String?
+  /// Estimated reading time in minutes, derived from the content on save.
+  readMinutes Int     @default(1)
+  views       Int     @default(0)
+  featured    Boolean @default(false)
+
+  approvalStatus ApprovalStatus @default(approved)
+  reviewNote     String?
+  reviewedAt     DateTime?
+  reviewedById   String?
+  reviewedBy     User?          @relation("BlogReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([subject])
   @@index([published, createdAt])
+  @@index([approvalStatus])
+}
+
+model SiteCounter {
+  id        String   @id
+  key       String   @unique
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
 }
 
 enum Role {
@@ -250,4 +343,43 @@ enum OrderStatus {
   Success
   Failed
   Pending
+}
+
+/// An in-app notification addressed to exactly one user.
+///
+/// Events fan out on write (one row per recipient) rather than being computed
+/// on read: the read path is then a single indexed query, and a notification
+/// keeps the wording it had when it was sent even if the source row changes.
+model Notification {
+  id     String           @id @default(uuid())
+  userId String
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type   NotificationType @default(system)
+
+  title String
+  body  String
+  /// In-app destination for the whole row, e.g. "/dashboard/live-classes".
+  href  String?
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  /// Stable per-event key ("live-class:<id>") so re-running an event — an
+  /// approve/unapprove/approve cycle, a retried request — cannot duplicate a row.
+  dedupeKey String
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+enum NotificationType {
+  master_class
+  live_class
+  material
+  blog
+  approval
+  decision
+  order
+  system
 }

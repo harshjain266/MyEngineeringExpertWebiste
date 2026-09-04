@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { PlayCircle } from "lucide-react";
 import type { EnrolledCourse } from "@/types";
 import { Button } from "@/components/ui/button";
+import { courseImage } from "@/lib/utils";
 
 export function ContinueLearning({ items }: { items: EnrolledCourse[] }) {
   return (
@@ -22,7 +23,7 @@ export function ContinueLearning({ items }: { items: EnrolledCourse[] }) {
           <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-none">
             {item.course.thumbnail ? (
               <Image
-                src={item.course.thumbnail}
+                src={courseImage(item.course.thumbnail)}
                 alt={item.course.title}
                 fill
                 sizes="112px"

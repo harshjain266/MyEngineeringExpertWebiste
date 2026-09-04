@@ -6,9 +6,18 @@ import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { Bell, ChevronDown, KeyRound, LogOut, Menu, MessageSquare, Search, Settings, ShoppingCart } from "lucide-react";
 import { ChangePasswordModal } from "@/components/auth/change-password-modal";
+import { avatarImage } from "@/lib/utils";
 import type { User } from "@/types";
 
-export function Topbar({ user, onMenu }: { user: User; onMenu: () => void }) {
+export function Topbar({
+  user,
+  onMenu,
+  unreadCount = 0,
+}: {
+  user: User;
+  onMenu: () => void;
+  unreadCount?: number;
+}) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -43,9 +52,18 @@ export function Topbar({ user, onMenu }: { user: User; onMenu: () => void }) {
       </div>
 
       <div className="ml-auto flex items-center gap-1">
-        <IconButton icon={ShoppingCart} />
-        <IconButton icon={Bell} />
-        <IconButton icon={MessageSquare} />
+        <IconLink icon={ShoppingCart} href="/dashboard/orders" label="My orders" />
+        <IconLink
+          icon={Bell}
+          href="/notifications"
+          label={
+            unreadCount > 0
+              ? `Notifications, ${unreadCount} unread`
+              : "Notifications"
+          }
+          badge={unreadCount}
+        />
+        <IconLink icon={MessageSquare} href="/dashboard/help" label="Help and support" />
 
         <div ref={profileRef} className="relative ml-2">
           <button
@@ -55,7 +73,7 @@ export function Topbar({ user, onMenu }: { user: User; onMenu: () => void }) {
             aria-expanded={profileOpen}
           >
             <Image
-              src={user.avatar}
+              src={avatarImage(user.avatar, user.name)}
               alt={user.name}
               width={34}
               height={34}
@@ -106,10 +124,30 @@ export function Topbar({ user, onMenu }: { user: User; onMenu: () => void }) {
   );
 }
 
-function IconButton({ icon: Icon }: { icon: typeof Bell }) {
+function IconLink({
+  icon: Icon,
+  href,
+  label,
+  badge = 0,
+}: {
+  icon: typeof Bell;
+  href: string;
+  label: string;
+  badge?: number;
+}) {
   return (
-    <button className="relative grid h-10 w-10 place-items-center rounded-xl text-ink-soft transition-colors hover:bg-surface-muted hover:text-brand-700">
+    <Link
+      href={href}
+      aria-label={label}
+      title={label}
+      className="relative grid h-10 w-10 place-items-center rounded-xl text-ink-soft transition-colors hover:bg-surface-muted hover:text-brand-700"
+    >
       <Icon size={19} />
-    </button>
+      {badge > 0 && (
+        <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white">
+          {badge > 9 ? "9+" : badge}
+        </span>
+      )}
+    </Link>
   );
 }

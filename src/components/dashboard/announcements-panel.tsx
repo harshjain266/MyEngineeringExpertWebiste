@@ -14,7 +14,7 @@ const TONE: Record<Announcement["tone"], { icon: LucideIcon; ring: string; bg: s
 export function AnnouncementsPanel({ items }: { items: Announcement[] }) {
   return (
     <div className="rounded-2xl border border-surface-muted bg-white p-4">
-      <SectionHeader title="Announcements" viewAllHref="/dashboard/notifications" />
+      <SectionHeader title="Announcements" viewAllHref="/notifications" />
       <ul className="space-y-3">
         {items.map((a, i) => {
           const tone = TONE[a.tone];

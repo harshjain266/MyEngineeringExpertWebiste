@@ -7,7 +7,7 @@ import {
   BarChart3, Users, GraduationCap, BookOpen, ClipboardList, Search,
   ShieldCheck, UserRound, Mail, Phone, Calendar, BookMarked,
   DollarSign, BadgeCheck, ShoppingBag, TrendingUp, CreditCard,
-  Clock, ArrowUpDown, UserMinus,
+  Clock, ArrowUpDown, UserMinus, Eye, UsersRound,
 } from "lucide-react";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +58,24 @@ interface Props {
   recentOrders: RecentOrder[];
   admins: AdminAccount[];
   isSuperAdmin: boolean;
+  visitorStats: {
+    totalVisits: number;
+    uniqueVisitors: number;
+    todayVisits: number;
+  };
+  allOrders: {
+    id: string;
+    course: string;
+    courseId: string | null;
+    amount: number;
+    status: string;
+    planName: string | null;
+    razorpayOrderId: string | null;
+    razorpayPaymentId: string | null;
+    createdAt: string;
+    userName: string;
+    userEmail: string | null;
+  }[];
 }
 
 const container = {
@@ -338,6 +356,27 @@ function AdminContent(props: Props) {
       color: "text-indigo-600",
       bg: "bg-indigo-50",
     },
+    {
+      label: "Total Visits",
+      value: props.visitorStats.totalVisits.toLocaleString(),
+      icon: Eye,
+      color: "text-cyan-600",
+      bg: "bg-cyan-50",
+    },
+    {
+      label: "Unique Visitors",
+      value: props.visitorStats.uniqueVisitors.toLocaleString(),
+      icon: UsersRound,
+      color: "text-violet-600",
+      bg: "bg-violet-50",
+    },
+    {
+      label: "Today's Visits",
+      value: props.visitorStats.todayVisits.toLocaleString(),
+      icon: TrendingUp,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
   ];
 
   function formatMonth(iso: string) {
@@ -569,7 +608,7 @@ function AdminContent(props: Props) {
             />
           )}
           {tab === "orders" && (
-            <OrdersTab recentOrders={props.recentOrders} />
+            <OrdersTab allOrders={props.allOrders} />
           )}
           {tab === "admins" && (
             <AdminAccountsTable
@@ -636,7 +675,7 @@ function OverviewTab({
       )}
 
       {/* Stats Grid */}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {statCards.map((s) => (
           <div key={s.label} className="rounded-3xl border border-surface-muted bg-white p-5 shadow-soft">
             <div className={`mb-4 grid h-12 w-12 place-items-center rounded-2xl ${s.bg} ${s.color}`}>
@@ -790,14 +829,45 @@ function CourseEnrollmentChart({ orders }: { orders: RecentOrder[] }) {
 
 /* ─── Orders Tab ────────────────────────────────────────────── */
 
-function OrdersTab({ recentOrders }: { recentOrders: RecentOrder[] }) {
+function OrdersTab({ allOrders }: { allOrders: Props["allOrders"] }) {
+  const [filter, setFilter] = useState<"all" | "Success" | "Pending" | "Failed">("all");
+
+  const filtered = filter === "all" ? allOrders : allOrders.filter((o) => o.status === filter);
+
+  const statusColors: Record<string, string> = {
+    Success: "bg-emerald-50 text-emerald-700",
+    Pending: "bg-amber-50 text-amber-700",
+    Failed: "bg-rose-50 text-rose-700",
+  };
+
   return (
     <section className="overflow-hidden rounded-3xl border border-surface-muted bg-white shadow-soft">
       <div className="border-b border-surface-muted bg-surface-subtle px-6 py-4">
-        <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <ClipboardList size={18} className="text-brand-600" />
-          All Orders
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+            <ClipboardList size={18} className="text-brand-600" />
+            All Orders
+          </h2>
+          <div className="flex items-center gap-2">
+            {(["all", "Success", "Pending", "Failed"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setFilter(s)}
+                className={cn(
+                  "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                  filter === s
+                    ? "bg-brand-600 text-white"
+                    : "bg-surface-muted text-ink-muted hover:text-ink"
+                )}
+              >
+                {s === "all" ? "All" : s}
+              </button>
+            ))}
+            <span className="ml-2 rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-semibold text-ink-muted">
+              {filtered.length} / {allOrders.length}
+            </span>
+          </div>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -805,17 +875,19 @@ function OrdersTab({ recentOrders }: { recentOrders: RecentOrder[] }) {
             <tr className="border-b border-surface-muted bg-surface-subtle/50">
               <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-muted">Student</th>
               <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-muted">Course</th>
+              <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-muted">Plan</th>
+              <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-muted">Status</th>
               <th className="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-muted">Amount</th>
               <th className="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-ink-muted">Date</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-muted">
-            {recentOrders.length === 0 ? (
+            {filtered.length === 0 ? (
               <tr>
-                <td colSpan={4} className="p-10 text-center text-ink-muted">No orders found.</td>
+                <td colSpan={6} className="p-10 text-center text-ink-muted">No orders found.</td>
               </tr>
             ) : (
-              recentOrders.map((order) => (
+              filtered.map((order) => (
                 <tr key={order.id} className="hover:bg-surface-subtle/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -829,6 +901,12 @@ function OrdersTab({ recentOrders }: { recentOrders: RecentOrder[] }) {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-ink-soft">{order.course}</td>
+                  <td className="px-6 py-4 text-ink-soft">{order.planName ?? "—"}</td>
+                  <td className="px-6 py-4">
+                    <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", statusColors[order.status] ?? "bg-surface-muted text-ink-muted")}>
+                      {order.status}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 text-right font-semibold text-ink">{formatINR(order.amount)}</td>
                   <td className="px-6 py-4 text-right text-xs text-ink-muted">
                     {formatDate(order.createdAt)}

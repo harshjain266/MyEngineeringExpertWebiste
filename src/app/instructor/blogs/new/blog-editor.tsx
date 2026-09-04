@@ -22,6 +22,9 @@ interface Props {
     tags: string[];
     published: boolean;
     featuredImage: string;
+    excerpt?: string;
+    approvalStatus?: "pending" | "approved" | "rejected";
+    reviewNote?: string | null;
   };
   slug?: string;
 }
@@ -32,11 +35,14 @@ export default function BlogEditor({ instructor, subjects, initialData, slug }: 
   const [content, setContent] = useState(initialData?.content ?? "");
   const [subject, setSubject] = useState(initialData?.subject ?? "");
   const [tagsStr, setTagsStr] = useState(initialData?.tags?.join(", ") ?? "");
-  const [published, setPublished] = useState(initialData?.published ?? false);
+  const [excerpt, setExcerpt] = useState(initialData?.excerpt ?? "");
+  const [featuredImage, setFeaturedImage] = useState(initialData?.featuredImage ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const allSubjects = [...new Set([...DEFAULT_SUBJECTS, ...subjects])];
+
+  const wasRejected = initialData?.approvalStatus === "rejected";
 
   async function handleSubmit(publishNow: boolean) {
     if (!title || !content || !subject) {
@@ -52,7 +58,15 @@ export default function BlogEditor({ instructor, subjects, initialData, slug }: 
       .map((t) => t.trim())
       .filter(Boolean);
 
-    const body = { title, content, subject, tags, published: publishNow };
+    const body = {
+      title,
+      content,
+      subject,
+      tags,
+      excerpt,
+      featuredImage: featuredImage || null,
+      published: publishNow,
+    };
 
     try {
       let res;
@@ -92,7 +106,8 @@ export default function BlogEditor({ instructor, subjects, initialData, slug }: 
             {slug ? "Edit Blog" : "New Blog"}
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
-            Write your blog post using the rich editor below.
+            Write your post below. Submitting sends it to your admin for approval —
+            students see it once it is approved.
           </p>
         </div>
         <div className="flex gap-2">
@@ -107,10 +122,20 @@ export default function BlogEditor({ instructor, subjects, initialData, slug }: 
             onClick={() => handleSubmit(true)}
             disabled={loading}
           >
-            {loading ? "Publishing..." : "Publish"}
+            {loading ? "Submitting..." : "Submit for approval"}
           </Button>
         </div>
       </div>
+
+      {wasRejected && initialData?.reviewNote && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-bold">Your admin asked for changes</p>
+          <p className="mt-1">{initialData.reviewNote}</p>
+          <p className="mt-2 text-xs">
+            Fix the points above and submit again — it goes straight back to the queue.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-700">
@@ -157,6 +182,35 @@ export default function BlogEditor({ instructor, subjects, initialData, slug }: 
               className="w-full rounded-2xl border border-surface-muted bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-ink-muted/70 focus:border-brand-300 focus:ring-4 focus:ring-brand-100"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-semibold text-ink">
+            Teaser <span className="text-ink-muted">(shown on blog cards and in search)</span>
+          </label>
+          <textarea
+            rows={2}
+            value={excerpt}
+            onChange={(e) => setExcerpt(e.target.value)}
+            placeholder="One or two lines that make a student want to open this…"
+            className="w-full rounded-2xl border border-surface-muted bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-ink-muted/70 focus:border-brand-300 focus:ring-4 focus:ring-brand-100"
+          />
+          <p className="mt-1 text-xs text-ink-muted">
+            Leave blank and we&apos;ll generate one from your opening paragraph.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-semibold text-ink">
+            Cover image URL <span className="text-ink-muted">(optional)</span>
+          </label>
+          <input
+            type="url"
+            value={featuredImage}
+            onChange={(e) => setFeaturedImage(e.target.value)}
+            placeholder="https://…"
+            className="w-full rounded-2xl border border-surface-muted bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-ink-muted/70 focus:border-brand-300 focus:ring-4 focus:ring-brand-100"
+          />
         </div>
       </div>
 

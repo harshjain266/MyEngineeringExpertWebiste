@@ -11,8 +11,20 @@ import {
   getAdminMonthlyRevenue,
   getAdminRecentOrders,
   getAdminRecentUsers,
+  getAdminAllOrders,
 } from "@/lib/data";
 import { AdminClient } from "./admin-client";
+
+async function getVisitorStats() {
+  const counters = await prisma.siteCounter.findMany();
+  const counterMap = Object.fromEntries(counters.map((c) => [c.key, c.value]));
+  const today = new Date().toISOString().split("T")[0];
+  return {
+    totalVisits: counterMap["total_visits"] ?? 0,
+    uniqueVisitors: counterMap["unique_visitors"] ?? 0,
+    todayVisits: counterMap[`daily_${today}`] ?? 0,
+  };
+}
 
 export default async function AdminPage() {
   const user = await getCurrentUser();
@@ -29,6 +41,8 @@ export default async function AdminPage() {
     recentUsers,
     recentOrders,
     admins,
+    visitorStats,
+    allOrders,
   ] = await Promise.all([
     getAdminStats(user),
     getAdminMonthlyRevenue(user),
@@ -38,6 +52,8 @@ export default async function AdminPage() {
     getAdminRecentUsers(),
     getAdminRecentOrders(user),
     isSuperAdmin ? getAdminAccounts() : Promise.resolve([]),
+    getVisitorStats(),
+    getAdminAllOrders(user),
   ]);
 
   return (
@@ -51,6 +67,8 @@ export default async function AdminPage() {
       recentOrders={recentOrders}
       admins={admins}
       isSuperAdmin={isSuperAdmin}
+      visitorStats={visitorStats}
+      allOrders={allOrders}
     />
   );
 }

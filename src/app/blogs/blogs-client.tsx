@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { BookOpen, Clock, User, Filter } from "lucide-react";
+import { BookOpen, Clock, Eye, User, Filter, Search, Sparkles, Timer } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import type { Blog } from "@/types";
 
@@ -18,11 +18,23 @@ interface Props {
 
 export default function BlogsPageClient({ blogs, subjects }: Props) {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   const allSubjects = [...new Set([...DEFAULT_SUBJECTS, ...subjects])];
-  const filtered = selectedSubject
-    ? blogs.filter((b) => b.subject === selectedSubject)
-    : blogs;
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return blogs.filter((b) => {
+      if (selectedSubject && b.subject !== selectedSubject) return false;
+      if (!q) return true;
+      return (
+        b.title.toLowerCase().includes(q) ||
+        b.authorName.toLowerCase().includes(q) ||
+        (b.excerpt ?? "").toLowerCase().includes(q) ||
+        b.tags.some((t) => t.toLowerCase().includes(q))
+      );
+    });
+  }, [blogs, selectedSubject, query]);
 
   return (
     <div className="min-h-screen bg-surface-subtle">
@@ -45,6 +57,21 @@ export default function BlogsPageClient({ blogs, subjects }: Props) {
       </section>
 
       <div className="container-px py-10">
+        {/* Search */}
+        <div className="relative mx-auto mb-6 max-w-xl">
+          <Search
+            size={17}
+            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted"
+          />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search articles, topics or authors…"
+            aria-label="Search blogs"
+            className="h-12 w-full rounded-2xl border border-surface-muted bg-white pl-11 pr-4 text-sm text-ink outline-none transition focus:border-brand-300 focus:ring-4 focus:ring-brand-100"
+          />
+        </div>
+
         {/* Subject Filter */}
         <div className="flex flex-wrap items-center gap-2 mb-10">
           <span className="flex items-center gap-1.5 text-sm font-semibold text-ink mr-1">
@@ -84,7 +111,9 @@ export default function BlogsPageClient({ blogs, subjects }: Props) {
               No blogs found
             </h3>
             <p className="mt-2 max-w-md text-sm text-ink-muted">
-              No blogs available for this subject yet. Check back later.
+              {query
+                ? `Nothing matched “${query}”. Try a different keyword.`
+                : "No blogs available for this subject yet. Check back later."}
             </p>
           </div>
         ) : (
@@ -112,14 +141,43 @@ export default function BlogsPageClient({ blogs, subjects }: Props) {
                     <BookOpen size={40} className="text-brand-300" />
                   </div>
                 )}
-                <div className="p-5">
-                  <span className="inline-block rounded-full bg-brand-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand-700">
-                    {blog.subject.replace(/-/g, " ")}
+                {blog.featured && (
+                  <span className="absolute left-4 top-4 z-20 inline-flex items-center gap-1 rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-950 shadow-soft">
+                    <Sparkles size={11} /> Editor&apos;s pick
                   </span>
+                )}
+                <div className="p-5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-block rounded-full bg-brand-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand-700">
+                      {blog.subject.replace(/-/g, " ")}
+                    </span>
+                    {blog.readMinutes ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-ink-muted">
+                        <Timer size={12} /> {blog.readMinutes} min read
+                      </span>
+                    ) : null}
+                  </div>
                   <h3 className="mt-3 line-clamp-2 font-display text-lg font-bold text-ink group-hover:text-brand-700">
                     {blog.title}
                   </h3>
-                  <div className="mt-3 flex items-center gap-3 text-xs text-ink-muted">
+                  {blog.excerpt && (
+                    <p className="mt-2 line-clamp-3 text-sm leading-6 text-ink-muted">
+                      {blog.excerpt}
+                    </p>
+                  )}
+                  {blog.tags.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {blog.tags.slice(0, 3).map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-md bg-surface-subtle px-2 py-0.5 text-[10px] font-semibold text-ink-soft"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-surface-muted pt-3 text-xs text-ink-muted">
                     <span className="flex items-center gap-1">
                       <User size={12} />
                       {blog.authorInstructorId ? (
@@ -141,6 +199,12 @@ export default function BlogsPageClient({ blogs, subjects }: Props) {
                         year: "numeric",
                       })}
                     </span>
+                    {(blog.views ?? 0) > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Eye size={12} />
+                        {(blog.views ?? 0).toLocaleString("en-IN")}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

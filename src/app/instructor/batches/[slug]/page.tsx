@@ -15,6 +15,9 @@ import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StartClassButton } from "@/components/instructor/start-class-button";
+import { MaterialManager } from "@/components/course/material-manager";
+import { listCourseMaterials } from "@/lib/data";
+import { courseImage } from "@/lib/utils";
 
 type _LiveClass = { id: string; title: string; topic: string; status: string; startsAt: Date; endsAt: Date; subject: string | null; meetingUrl: string | null; courseId: string | null };
 
@@ -86,6 +89,9 @@ export default async function InstructorBatchDetailPage({ params }: Params) {
 
   if (!course) notFound();
 
+  // Ownership is proven by the `instructorId` filter above.
+  const materials = await listCourseMaterials(course.id);
+
   const now = new Date();
   const upcoming = course.liveClasses.filter((liveClass: _LiveClass) => liveClass.startsAt >= now);
   const liveCount = course.liveClasses.filter(
@@ -105,7 +111,7 @@ export default async function InstructorBatchDetailPage({ params }: Params) {
           <div className="relative min-h-64 bg-brand-50">
             {course.thumbnail ? (
               <Image
-                src={course.thumbnail}
+                src={courseImage(course.thumbnail)}
                 alt={course.title}
                 fill
                 sizes="(max-width: 1024px) 100vw, 360px"
@@ -139,6 +145,8 @@ export default async function InstructorBatchDetailPage({ params }: Params) {
           </div>
         </div>
       </section>
+
+      <MaterialManager courseId={course.id} materials={materials} />
 
       <section className="rounded-3xl border border-surface-muted bg-white p-5 shadow-soft sm:p-6">
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">

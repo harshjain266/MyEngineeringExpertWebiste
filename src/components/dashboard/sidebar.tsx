@@ -12,7 +12,16 @@ import { cn } from "@/lib/utils";
 import { roleLabel } from "@/lib/role-routes";
 import type { User } from "@/types";
 
-export function Sidebar({ user, onClose }: { user: User; onClose?: () => void }) {
+export function Sidebar({
+  user,
+  onClose,
+  badges,
+}: {
+  user: User;
+  onClose?: () => void;
+  /** Live counts keyed by nav href, e.g. `{ "/admin/approvals": 3 }`. */
+  badges?: Record<string, number>;
+}) {
   const pathname = usePathname();
   const nav = sidebarNavForRole(user.role);
   const isStudent = user.role === "student";
@@ -38,6 +47,7 @@ export function Sidebar({ user, onClose }: { user: User; onClose?: () => void })
           const active =
             pathname === item.href ||
             (item.href !== "/dashboard" && pathname.startsWith(item.href));
+          const badge = badges?.[item.href] ?? item.badge;
           return (
             <Link
               key={item.href}
@@ -62,37 +72,18 @@ export function Sidebar({ user, onClose }: { user: User; onClose?: () => void })
                 className={cn("relative z-10 shrink-0", active && "text-white")}
               />
               <span className="relative z-10 flex-1">{item.label}</span>
-              {item.badge && (
+              {badge ? (
                 <Badge
                   variant={active ? "neutral" : "brand"}
                   className={cn("relative z-10", active && "bg-white/20 text-white")}
                 >
-                  {item.badge}
+                  {badge}
                 </Badge>
-              )}
+              ) : null}
             </Link>
           );
         })}
       </nav>
-
-      <div className="m-3 rounded-2xl bg-brand-gradient p-4 text-white shadow-glow">
-        <div className="flex items-center gap-2">
-          <Sparkles size={18} className="text-amber-300" />
-          <span className="font-display text-sm font-bold">
-            {isStudent ? "Upgrade to Premium" : "Profile Visibility"}
-          </span>
-        </div>
-        <p className="mt-1.5 text-xs text-white/80">
-          {isStudent
-            ? "Unlock all features, test series, notes & more."
-            : "Complete your profile so students can trust and discover you."}
-        </p>
-        {isStudent ? (
-          <Button variant="secondary" size="sm" className="mt-3 w-full">
-            Upgrade Now
-          </Button>
-        ) : null}
-      </div>
     </aside>
   );
 }

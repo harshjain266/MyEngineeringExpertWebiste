@@ -1,9 +1,6 @@
-import type { Metadata } from "next";
-import { Bell } from "lucide-react";
-import { ComingSoon } from "@/components/dashboard/coming-soon";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Notifications" };
-
-export default function Page() {
-  return <ComingSoon title="Notifications" icon={<Bell size={34} />} />;
+/** Notifications moved to the role-agnostic /notifications route. */
+export default function DashboardNotificationsRedirect() {
+  redirect("/notifications");
 }

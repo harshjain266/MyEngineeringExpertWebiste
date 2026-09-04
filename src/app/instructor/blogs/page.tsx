@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Edit3, Eye, Globe, Lock } from "lucide-react";
+import { Plus, Edit3, Eye, Globe, Lock, Clock3, XCircle } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,8 @@ export default async function InstructorBlogsPage() {
         <div>
           <h1 className="font-display text-3xl font-bold text-ink">My Blogs</h1>
           <p className="mt-1 text-sm text-ink-muted">
-            Write and manage blog posts for your students.
+            Write and manage blog posts for your students. Everything you publish goes to
+            your admin for approval before students can read it.
           </p>
         </div>
         <Link href="/instructor/blogs/new">
@@ -56,25 +57,42 @@ export default async function InstructorBlogsPage() {
                   <h3 className="truncate font-display text-lg font-bold text-ink">
                     {blog.title}
                   </h3>
-                  {blog.published ? (
-                    <Badge variant="brand" className="shrink-0">
-                      <Globe size={11} className="mr-1" />
-                      Published
-                    </Badge>
-                  ) : (
+                  {!blog.published ? (
                     <Badge variant="neutral" className="shrink-0">
                       <Lock size={11} className="mr-1" />
                       Draft
+                    </Badge>
+                  ) : blog.approvalStatus === "approved" ? (
+                    <Badge variant="brand" className="shrink-0">
+                      <Globe size={11} className="mr-1" />
+                      Live
+                    </Badge>
+                  ) : blog.approvalStatus === "rejected" ? (
+                    <Badge variant="danger" className="shrink-0">
+                      <XCircle size={11} className="mr-1" />
+                      Changes requested
+                    </Badge>
+                  ) : (
+                    <Badge variant="warning" className="shrink-0">
+                      <Clock3 size={11} className="mr-1" />
+                      Awaiting approval
                     </Badge>
                   )}
                 </div>
                 <div className="mt-1 flex flex-wrap gap-3 text-xs text-ink-muted">
                   <span>Subject: {blog.subject}</span>
+                  <span>{blog.readMinutes} min read</span>
+                  {blog.views > 0 && <span>{blog.views.toLocaleString("en-IN")} reads</span>}
                   <span>Updated: {blog.updatedAt.toLocaleDateString("en-IN")}</span>
                 </div>
+                {blog.reviewNote && blog.approvalStatus === "rejected" && (
+                  <p className="mt-2 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                    <span className="font-bold">Reviewer note:</span> {blog.reviewNote}
+                  </p>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                {blog.published && (
+                {blog.published && blog.approvalStatus === "approved" && (
                   <Link
                     href={`/blogs/${blog.slug}`}
                     className="flex h-9 w-9 items-center justify-center rounded-xl border border-surface-muted text-ink-soft transition-colors hover:bg-surface-muted hover:text-ink"

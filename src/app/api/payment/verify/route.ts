@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { announceEnrollment } from "@/lib/notifications";
 import type { Prisma } from "@prisma/client";
 
 export async function POST(req: Request) {
@@ -55,6 +56,19 @@ export async function POST(req: Request) {
         });
       }
     });
+
+    if (order.courseId) {
+      const course = await prisma.course.findUnique({
+        where: { id: order.courseId },
+        select: { slug: true },
+      });
+      await announceEnrollment({
+        userId,
+        orderId: order.id,
+        courseTitle: order.course,
+        courseSlug: course?.slug,
+      });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
