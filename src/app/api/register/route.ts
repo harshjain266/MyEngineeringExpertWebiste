@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { createAndSendVerificationEmail } from "@/lib/email-verification";
+import { EMAIL_FORMAT_ERROR, isValidEmail } from "@/lib/utils";
 
 export async function POST(req: Request) {
   try {
@@ -12,6 +13,10 @@ export async function POST(req: Request) {
         { error: "Missing required fields" },
         { status: 400 }
       );
+    }
+
+    if (typeof email !== "string" || !isValidEmail(email)) {
+      return NextResponse.json({ error: EMAIL_FORMAT_ERROR }, { status: 400 });
     }
 
     const existingUser = await prisma.user.findUnique({

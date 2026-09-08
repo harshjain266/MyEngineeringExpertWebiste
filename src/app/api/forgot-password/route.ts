@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createAndSendPasswordResetEmail } from "@/lib/password-reset";
+import { EMAIL_FORMAT_ERROR, isValidEmail } from "@/lib/utils";
 
 export async function POST(req: Request) {
   try {
@@ -8,6 +9,10 @@ export async function POST(req: Request) {
 
     if (!email || typeof email !== "string") {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ error: EMAIL_FORMAT_ERROR }, { status: 400 });
     }
 
     const normalized = email.trim().toLowerCase();

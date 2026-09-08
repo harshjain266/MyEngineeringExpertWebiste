@@ -82,6 +82,7 @@ function revalidateCourseSurfaces() {
 function revalidateLiveClassSurfaces() {
   revalidatePath("/admin/approvals");
   revalidatePath("/admin/live-classes");
+  revalidatePath("/admin/master-classes");
   revalidatePath("/instructor/batches");
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/live-classes");

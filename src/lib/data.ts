@@ -509,10 +509,14 @@ export async function getAdminCourses(): Promise<AdminCourse[]> {
 }
 
 /** Live classes scoped to an admin's aligned instructors (all for superadmin). */
-export async function getAdminLiveClasses(user: User): Promise<AdminLiveClass[]> {
+export async function getAdminLiveClasses(
+  user: User,
+  extraWhere: Prisma.LiveClassWhereInput = {},
+): Promise<AdminLiveClass[]> {
   const scope = adminInstructorScope(user);
   const liveClasses = await prisma.liveClass.findMany({
     where: {
+      ...extraWhere,
       instructor: {
         is: {
           ...(Object.keys(scope).length > 0 ? scope : {}),
@@ -541,6 +545,15 @@ export async function getAdminLiveClasses(user: User): Promise<AdminLiveClass[]>
     approvalStatus: (lc as any).approvalStatus,
     reviewNote: (lc as any).reviewNote ?? null,
   }));
+}
+
+/**
+ * Master classes an admin can see: the sessions with no course attached, which
+ * are free and open to every student. Same scoping rule as the batch classes —
+ * an admin sees their own teachers, a superadmin sees all of them.
+ */
+export async function getAdminMasterClasses(user: User): Promise<AdminLiveClass[]> {
+  return getAdminLiveClasses(user, { courseId: null });
 }
 
 /* ─── Approval queue ────────────────────────────────────────── */

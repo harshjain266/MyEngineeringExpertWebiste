@@ -240,6 +240,7 @@ export async function createLiveClass(input: CreateLiveClassInput) {
     }
 
     revalidatePath("/admin/live-classes");
+    revalidatePath("/admin/master-classes");
     revalidatePath("/admin/approvals");
     revalidatePath("/instructor/batches");
     revalidatePath("/dashboard");
@@ -251,6 +252,68 @@ export async function createLiveClass(input: CreateLiveClassInput) {
     return {
       success: false,
       error: err instanceof Error ? err.message : "Could not create live class. Please try again.",
+    };
+  }
+}
+
+export interface CreateMasterClassInput {
+  title: string;
+  topic: string;
+  subject?: string;
+  meetingUrl?: string;
+  startsAt: string;
+  endsAt: string;
+  instructorId: string;
+}
+
+/**
+ * Schedule a free master class.
+ *
+ * A master class is simply a live class with no course attached — that is what
+ * makes it visible to every student instead of one batch — so this delegates to
+ * `createLiveClass` and only guarantees the course link stays empty.
+ */
+export async function createMasterClass(input: CreateMasterClassInput) {
+  return createLiveClass({ ...input, courseId: undefined });
+}
+
+/** Cancel a scheduled master class. Completed sessions stay on the record. */
+export async function cancelMasterClass(liveClassId: string) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: "Unauthorized. Please sign in as an admin." };
+    }
+
+    const liveClass = await prisma.liveClass.findUnique({
+      where: { id: liveClassId },
+      select: { id: true, courseId: true, status: true, instructorId: true },
+    });
+
+    if (!liveClass || liveClass.courseId !== null) {
+      return { success: false, error: "Master class not found." };
+    }
+
+    await assertCanManageInstructor(liveClass.instructorId);
+
+    if (liveClass.status === "Completed") {
+      return { success: false, error: "A completed master class cannot be cancelled." };
+    }
+
+    await prisma.liveClass.delete({ where: { id: liveClass.id } });
+
+    revalidatePath("/admin/master-classes");
+    revalidatePath("/admin/live-classes");
+    revalidatePath("/admin/approvals");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/live-classes");
+
+    return { success: true };
+  } catch (err) {
+    console.error("cancelMasterClass error:", err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Could not cancel the master class.",
     };
   }
 }

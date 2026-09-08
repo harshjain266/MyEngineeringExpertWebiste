@@ -37,13 +37,15 @@ const DOCUMENT_TYPES = [
 ];
 
 const MAX_SIZE = 4 * 1024 * 1024;
+/** Avatars are inlined into every page that renders the user, so cap them harder. */
+const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
 
-type UploadKind = "image" | "material";
+type UploadKind = "image" | "material" | "avatar";
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user || (user.role !== "instructor" && !canAccessAdmin(user))) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -51,11 +53,24 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File | null;
     const kind = (formData.get("kind") as UploadKind | null) ?? "image";
 
+    // Anyone signed in may replace their own profile photo; everything else
+    // publishes to students and stays limited to teachers and admins.
+    if (kind !== "avatar" && user.role !== "instructor" && !canAccessAdmin(user)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const allowed = kind === "material" ? [...IMAGE_TYPES, ...DOCUMENT_TYPES] : IMAGE_TYPES;
+    const allowed =
+      kind === "material"
+        ? [...IMAGE_TYPES, ...DOCUMENT_TYPES]
+        : kind === "avatar"
+          // SVG is script-bearing markup, and avatars are the one upload
+          // any student can make — keep this list to raster formats.
+          ? IMAGE_TYPES.filter((t) => t !== "image/svg+xml")
+          : IMAGE_TYPES;
 
     if (!allowed.includes(file.type)) {
       return NextResponse.json(
@@ -63,14 +78,20 @@ export async function POST(request: NextRequest) {
           error:
             kind === "material"
               ? "Unsupported file. Accepted: PDF, Word, PowerPoint, Excel, ZIP, text and images."
-              : "Invalid file type. Accepted: JPEG, PNG, GIF, WebP, SVG, BMP, TIFF, AVIF.",
+              : kind === "avatar"
+                ? "Invalid image. Accepted: JPEG, PNG, GIF, WebP, BMP, TIFF, AVIF."
+                : "Invalid file type. Accepted: JPEG, PNG, GIF, WebP, SVG, BMP, TIFF, AVIF.",
         },
         { status: 400 },
       );
     }
 
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json({ error: "File too large (max 4MB)" }, { status: 400 });
+    const sizeLimit = kind === "avatar" ? MAX_AVATAR_SIZE : MAX_SIZE;
+    if (file.size > sizeLimit) {
+      return NextResponse.json(
+        { error: `File too large (max ${sizeLimit / (1024 * 1024)}MB)` },
+        { status: 400 },
+      );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());

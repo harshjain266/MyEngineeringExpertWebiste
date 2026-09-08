@@ -14,7 +14,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Eye, EyeOff, Loader2, Lock, Mail, User, X } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, EMAIL_FORMAT_ERROR, isValidEmail } from "@/lib/utils";
+import { signInErrorMessage } from "@/lib/auth-errors";
 import { portalHrefForRole } from "@/lib/role-routes";
 import Link from "next/link";
 
@@ -81,17 +82,19 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
       setError("Please enter your email and password");
       return;
     }
+    if (!isValidEmail(email)) {
+      setError(EMAIL_FORMAT_ERROR);
+      return;
+    }
     setLoading(true);
     try {
-      const res = await signIn("credentials", { email, password, redirect: false });
+      const res = await signIn("credentials", {
+        email: email.trim(),
+        password,
+        redirect: false,
+      });
       if (res?.error) {
-        setError(
-          res.error === "EMAIL_NOT_VERIFIED"
-            ? "Please verify your email. We sent a fresh verification link."
-            : res.error.includes("disabled")
-              ? res.error
-              : "Invalid email or password",
-        );
+        setError(signInErrorMessage(res.error));
         return;
       }
       const session = await getSession();
@@ -113,6 +116,10 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
       setError("Please fill in all fields");
       return;
     }
+    if (!isValidEmail(email)) {
+      setError(EMAIL_FORMAT_ERROR);
+      return;
+    }
     if (password.length < 6) {
       setError("Password must be at least 6 characters");
       return;
@@ -122,7 +129,7 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email, password }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
       });
       const data = await res.json();
       if (!res.ok) {

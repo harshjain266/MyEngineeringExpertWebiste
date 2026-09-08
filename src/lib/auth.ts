@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import type { User } from "@/types";
 import { createAndSendVerificationEmail } from "@/lib/email-verification";
+import { isValidEmail } from "@/lib/utils";
 
 const DEFAULT_AVATAR = (seed: string) =>
   `https://i.pravatar.cc/160?u=${encodeURIComponent(seed)}`;
@@ -20,7 +21,14 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
+          throw new Error("MISSING_CREDENTIALS");
+        }
+
+        // Surfaced to the sign-in form as its own message: a typo in the email
+        // is a different problem from a wrong password, and saying so saves the
+        // user from retyping a password that was never the issue.
+        if (!isValidEmail(credentials.email)) {
+          throw new Error("INVALID_EMAIL_FORMAT");
         }
 
         const user = await prisma.user.findUnique({

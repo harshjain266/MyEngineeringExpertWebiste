@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { EMAIL_FORMAT_ERROR, isValidEmail } from "@/lib/utils";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -15,14 +16,19 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
+    if (!isValidEmail(email)) {
+      setError(EMAIL_FORMAT_ERROR);
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email: email.trim(), password }),
       });
 
       const data = await res.json();
@@ -32,8 +38,8 @@ export default function RegisterPage() {
       } else {
         router.push("/login?registered=true");
       }
-    } catch (err) {
-      setError("An unexpected error occurred");
+    } catch {
+      setError("We couldn't reach the server. Check your connection and try again.");
     } finally {
       setLoading(false);
     }

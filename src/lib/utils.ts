@@ -81,3 +81,21 @@ export function avatarImage(avatar?: string | null, seed = "user") {
   if (avatar && avatar.trim()) return avatar;
   return `https://i.pravatar.cc/160?u=${encodeURIComponent(seed)}`;
 }
+
+/**
+ * Email-format guard shared by every sign-in / sign-up surface.
+ *
+ * Deliberately stricter than `<input type="email">`, which happily accepts
+ * "name@example" (no dot, no TLD). Those values used to reach the server and
+ * come back as a generic failure, so the check runs here first and the caller
+ * shows `EMAIL_FORMAT_ERROR` instead.
+ */
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
+
+export function isValidEmail(value: string): boolean {
+  const email = value.trim();
+  return email.length <= 254 && EMAIL_PATTERN.test(email);
+}
+
+export const EMAIL_FORMAT_ERROR =
+  "That email address doesn't look right. Use a format like name@example.com.";

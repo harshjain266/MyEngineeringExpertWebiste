@@ -7,6 +7,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Eye, EyeOff, Loader2, CheckCircle2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EMAIL_FORMAT_ERROR, isValidEmail } from "@/lib/utils";
+import { signInErrorMessage } from "@/lib/auth-errors";
 
 export default function LoginPage() {
   return (
@@ -21,6 +23,7 @@ function LoginPageContent() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<"login" | "forgot">("login");
@@ -44,25 +47,40 @@ function LoginPageContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
     setSuccess("");
+
+    // Caught before the round trip so a mistyped address reads as a typo
+    // instead of a failed sign-in.
+    if (!email.trim()) {
+      setEmailError("Please enter your email address.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setEmailError(EMAIL_FORMAT_ERROR);
+      return;
+    }
+    setEmailError("");
+
+    setLoading(true);
     try {
-      const res = await signIn("credentials", { email, password, redirect: false });
+      const res = await signIn("credentials", {
+        email: email.trim(),
+        password,
+        redirect: false,
+      });
       if (res?.error) {
-        setError(
-          res.error === "EMAIL_NOT_VERIFIED"
-            ? "Please verify your email. We sent a fresh verification link."
-            : res.error.includes("disabled")
-              ? res.error
-              : "Invalid email or password. Please try again.",
-        );
+        if (res.error === "INVALID_EMAIL_FORMAT") {
+          setEmailError(EMAIL_FORMAT_ERROR);
+          return;
+        }
+        setError(signInErrorMessage(res.error));
         return;
       }
       const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
       window.location.assign(callbackUrl.startsWith("/") ? callbackUrl : "/dashboard");
     } catch {
-      setError("An unexpected error occurred");
+      setError("We couldn't reach the server. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -70,9 +88,19 @@ function LoginPageContent() {
 
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
-    setForgotLoading(true);
     setForgotError("");
     setForgotSent(false);
+
+    if (!forgotEmail.trim()) {
+      setForgotError("Please enter your email address.");
+      return;
+    }
+    if (!isValidEmail(forgotEmail)) {
+      setForgotError(EMAIL_FORMAT_ERROR);
+      return;
+    }
+
+    setForgotLoading(true);
     try {
       const res = await fetch("/api/forgot-password", {
         method: "POST",
@@ -107,7 +135,7 @@ function LoginPageContent() {
         </div>
 
         {view === "login" ? (
-          <form className="mt-8 space-y-5" onSubmit={handleSubmit} autoComplete="off">
+          <form className="mt-8 space-y-5" onSubmit={handleSubmit} autoComplete="off" noValidate>
             {error && (
               <div className="rounded-md bg-red-50 p-3 text-sm text-red-500">{error}</div>
             )}
@@ -130,11 +158,28 @@ function LoginPageContent() {
                   type="email"
                   required
                   autoComplete="off"
-                  className="block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                  aria-invalid={!!emailError}
+                  aria-describedby={emailError ? "login-email-error" : undefined}
+                  className={`block w-full rounded-lg border px-3 py-2.5 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 sm:text-sm ${
+                    emailError
+                      ? "border-red-400 focus:border-red-500 focus:ring-red-500"
+                      : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500"
+                  }`}
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError("");
+                  }}
+                  onBlur={() => {
+                    if (email.trim() && !isValidEmail(email)) setEmailError(EMAIL_FORMAT_ERROR);
+                  }}
                 />
+                {emailError && (
+                  <p id="login-email-error" className="mt-1.5 text-sm text-red-500">
+                    {emailError}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -203,7 +248,7 @@ function LoginPageContent() {
             </div>
           </form>
         ) : (
-          <form className="mt-8 space-y-5" onSubmit={handleForgot} autoComplete="off">
+          <form className="mt-8 space-y-5" onSubmit={handleForgot} autoComplete="off" noValidate>
             {forgotSent && (
               <div className="flex items-start gap-2 rounded-md bg-emerald-50 p-3 text-sm text-emerald-600 border border-emerald-100">
                 <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
