@@ -8,6 +8,7 @@ import type { LiveClass } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MasterClassBadge } from "@/components/ui/master-class-badge";
+import { MeetingPasscode } from "@/components/ui/meeting-passcode";
 import { SectionHeader } from "@/components/dashboard/section-header";
 import { avatarImage } from "@/lib/utils";
 
@@ -110,6 +111,10 @@ export function LiveClassPanel({
           <span className="flex items-center gap-1"><Clock size={13} /> {formatTime(featured.startsAt)} – {formatTime(featured.endsAt)}</span>
           <span className="flex items-center gap-1"><Users size={13} /> {featured.instructor.name}</span>
         </div>
+
+        {featured.meetingPassword ? (
+          <MeetingPasscode value={featured.meetingPassword} className="mt-3 py-1" />
+        ) : null}
 
         <div className="mt-4 flex gap-2">
           <Button

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, CalendarClock, Radio, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MeetingPasscode } from "@/components/ui/meeting-passcode";
 import type { LiveClass } from "@/types";
 
 function when(iso: string) {
@@ -76,7 +77,10 @@ export function MasterClassAlert({ classes }: { classes: LiveClass[] }) {
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {next.meetingPassword ? (
+            <MeetingPasscode value={next.meetingPassword} className="py-1" />
+          ) : null}
           {liveNow && liveNow.meetingUrl ? (
             <a href={liveNow.meetingUrl} target="_blank" rel="noopener noreferrer">
               <Button size="sm" className="gap-1.5 rounded-none bg-rose-600 hover:bg-rose-700">

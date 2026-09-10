@@ -43,6 +43,7 @@ export const SIDEBAR_NAV: NavItem[] = [
   { label: "Help & Support", href: "/dashboard/help", icon: HelpCircle, roles: ["student"] },
   { label: "Instructor Home", href: "/instructor/dashboard", icon: LayoutDashboard, roles: ["instructor"] },
   { label: "My Batches", href: "/instructor/batches", icon: Layers3, roles: ["instructor"] },
+  { label: "Master Classes", href: "/instructor/master-classes", icon: GraduationCap, roles: ["instructor"] },
   { label: "My Blogs", href: "/instructor/blogs", icon: FileText, roles: ["instructor"] },
   { label: "Public Profile", href: "/instructor/settings/profile", icon: UserRound, roles: ["instructor"] },
   { label: "Notifications", href: "/notifications", icon: Bell, roles: ["instructor"] },

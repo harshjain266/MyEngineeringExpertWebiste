@@ -12,10 +12,14 @@ export const metadata: Metadata = { title: "Live Classes" };
 
 const isLiveNow = (c: LiveClass) => c.status === "Live" || c.status === "Ongoing";
 
+const SCHEDULE_WINDOW_DAYS = 60;
+
 export default async function LiveClassesPage() {
+  // The dashboard panel shows the next week; this is the full schedule page, so
+  // it looks further ahead — a class booked a month out should still be listed.
   const [masterClasses, batchClasses] = await Promise.all([
-    getAllLiveClasses(),
-    getMyBatchLiveClasses(),
+    getAllLiveClasses(SCHEDULE_WINDOW_DAYS),
+    getMyBatchLiveClasses(SCHEDULE_WINDOW_DAYS),
   ]);
 
   const liveNow = [...batchClasses, ...masterClasses].filter(isLiveNow);
@@ -55,7 +59,7 @@ export default async function LiveClassesPage() {
         empty={
           <>
             <p className="text-ink-muted">
-              No batch classes scheduled in the next 7 days.
+              No batch classes scheduled in the next {SCHEDULE_WINDOW_DAYS} days.
             </p>
             <Link href="/dashboard/browse" className="mt-4 inline-block">
               <Button variant="secondary" size="sm">

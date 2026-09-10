@@ -142,7 +142,7 @@ export async function announceLiveClass(liveClassId: string) {
     .findUnique({
       where: { id: liveClassId },
       include: {
-        instructor: { select: { name: true } },
+        instructor: { select: { name: true, userId: true } },
         course: { select: { title: true, slug: true } },
       },
     })
@@ -151,6 +151,28 @@ export async function announceLiveClass(liveClassId: string) {
   if (!liveClass || liveClass.approvalStatus !== "approved") return;
 
   const when = whenLabel(liveClass.startsAt);
+
+  // The host teacher is told about every class scheduled for them — they are the
+  // one who has to show up and start it.
+  const passcodeNote = liveClass.meetingPassword
+    ? ` Meeting passcode: ${liveClass.meetingPassword}.`
+    : "";
+
+  await notifyUser(liveClass.instructor.userId, {
+    type: liveClass.courseId ? "live_class" : "master_class",
+    title: liveClass.courseId
+      ? `You're hosting: ${liveClass.title}`
+      : `You're hosting a master class: ${liveClass.title}`,
+    body: `"${liveClass.topic}" on ${when}.${
+      liveClass.courseId
+        ? ` For ${liveClass.course?.title ?? "your batch"}.`
+        : " Open to every student on the platform."
+    }${passcodeNote}`,
+    href: liveClass.courseId
+      ? `/instructor/batches/${liveClass.course?.slug ?? ""}`
+      : "/instructor/master-classes",
+    dedupeKey: `live-class-host:${liveClass.id}`,
+  });
 
   if (!liveClass.courseId) {
     await notifyAllStudents({

@@ -271,6 +271,7 @@ export interface LiveClassEditInput {
   topic: string;
   subject?: string;
   meetingUrl?: string;
+  meetingPassword?: string;
   startsAt: string;
   endsAt: string;
 }
@@ -299,6 +300,7 @@ export async function updateLiveClassFromReview(
         topic: input.topic.trim(),
         subject: input.subject?.trim() || null,
         meetingUrl: input.meetingUrl?.trim() || null,
+        meetingPassword: input.meetingPassword?.trim() || null,
         startsAt,
         endsAt,
       },

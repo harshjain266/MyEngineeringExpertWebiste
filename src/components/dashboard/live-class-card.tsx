@@ -5,6 +5,7 @@ import { CalendarDays, Clock, Radio, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MasterClassBadge } from "@/components/ui/master-class-badge";
+import { MeetingPasscode } from "@/components/ui/meeting-passcode";
 import { avatarImage } from "@/lib/utils";
 
 function formatTime(iso: string) {
@@ -82,6 +83,14 @@ export function LiveClassCard({ item, isLive }: { item: any; isLive?: boolean })
             <span>{item.instructor.name}</span>
           </div>
         </div>
+
+        {/* Shown as soon as the class is scheduled, not only once it is live:
+            students want the passcode to hand before the room opens. */}
+        {item.meetingPassword ? (
+          <div className="mt-4">
+            <MeetingPasscode value={item.meetingPassword} className="w-full rounded-none" />
+          </div>
+        ) : null}
 
         <div className="mt-auto pt-6">
           <Button

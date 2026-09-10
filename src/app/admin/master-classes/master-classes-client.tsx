@@ -9,6 +9,7 @@ import {
   Clock,
   Copy,
   GraduationCap,
+  KeyRound,
   Link2,
   Loader2,
   Radio,
@@ -18,6 +19,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { cancelMasterClass, createMasterClass } from "@/app/actions/admin";
+import { MeetingPasscode } from "@/components/ui/meeting-passcode";
 import { cn } from "@/lib/utils";
 import type { AdminLiveClass } from "@/types";
 
@@ -67,6 +69,7 @@ export function AdminMasterClassesClient({ instructors, masterClasses, autoAppro
     startsAt: toDateTimeLocal(60),
     endsAt: toDateTimeLocal(120),
     meetingUrl: "",
+    meetingPassword: "",
   });
 
   const set =
@@ -123,6 +126,7 @@ export function AdminMasterClassesClient({ instructors, masterClasses, autoAppro
       startsAt: form.startsAt,
       endsAt: form.endsAt,
       meetingUrl: form.meetingUrl || undefined,
+      meetingPassword: form.meetingPassword || undefined,
     });
     setSubmitting(false);
 
@@ -136,7 +140,14 @@ export function AdminMasterClassesClient({ instructors, masterClasses, autoAppro
         ? "Master class sent to the superadmin for approval. Students see it once it's approved."
         : "Master class scheduled — every student has been notified.",
     );
-    setForm((prev) => ({ ...prev, title: "", topic: "", subject: "", meetingUrl: "" }));
+    setForm((prev) => ({
+      ...prev,
+      title: "",
+      topic: "",
+      subject: "",
+      meetingUrl: "",
+      meetingPassword: "",
+    }));
     router.refresh();
   };
 
@@ -271,6 +282,26 @@ export function AdminMasterClassesClient({ instructors, masterClasses, autoAppro
                   />
                 </div>
               </div>
+            </div>
+
+            <div>
+              <label className={labelCls}>Meeting Password</label>
+              <div className="relative">
+                <KeyRound
+                  size={15}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"
+                />
+                <input
+                  value={form.meetingPassword}
+                  onChange={set("meetingPassword")}
+                  placeholder="Passcode students and the teacher will need"
+                  className={cn(inputCls, "pl-9")}
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-ink-muted">
+                Shown next to the join link for the host teacher and every student. Leave empty
+                if the link needs no passcode.
+              </p>
             </div>
 
             <div>
@@ -440,6 +471,9 @@ export function AdminMasterClassesClient({ instructors, masterClasses, autoAppro
                         {mc.subject && <span>{mc.subject}</span>}
                       </div>
                       <p className="mt-0.5 line-clamp-1 text-xs text-ink-soft">{mc.topic}</p>
+                      {mc.meetingPassword && (
+                        <MeetingPasscode value={mc.meetingPassword} className="mt-1.5 py-1" />
+                      )}
                       {mc.approvalStatus === "rejected" && mc.reviewNote && (
                         <p className="mt-1 text-xs font-medium text-rose-600">
                           Rejected: {mc.reviewNote}

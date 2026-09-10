@@ -152,6 +152,7 @@ export interface CreateLiveClassInput {
   topic: string;
   subject?: string;
   meetingUrl?: string;
+  meetingPassword?: string;
   startsAt: string;
   endsAt: string;
   instructorId: string;
@@ -203,6 +204,7 @@ export async function createLiveClass(input: CreateLiveClassInput) {
         topic: input.topic.trim(),
         subject: input.subject || null,
         meetingUrl: input.meetingUrl || null,
+        meetingPassword: input.meetingPassword?.trim() || null,
         startsAt,
         endsAt,
         instructorId: input.instructorId,
@@ -261,6 +263,7 @@ export interface CreateMasterClassInput {
   topic: string;
   subject?: string;
   meetingUrl?: string;
+  meetingPassword?: string;
   startsAt: string;
   endsAt: string;
   instructorId: string;

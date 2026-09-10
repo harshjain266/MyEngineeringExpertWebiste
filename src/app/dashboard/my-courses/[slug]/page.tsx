@@ -15,6 +15,7 @@ import {
   getCourseMaterialsForStudent,
 } from "@/lib/data";
 import { Button } from "@/components/ui/button";
+import { MeetingPasscode } from "@/components/ui/meeting-passcode";
 import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
@@ -151,7 +152,10 @@ export default async function CourseLiveClassesPage({ params }: Params) {
                           </div>
                         </div>
 
-                        <div className="mt-5 flex items-center gap-3 sm:mt-0">
+                        <div className="mt-5 flex flex-wrap items-center gap-3 sm:mt-0">
+                          {lc.meetingPassword ? (
+                            <MeetingPasscode value={lc.meetingPassword} />
+                          ) : null}
                           {canJoin ? (
                             <a
                               href={lc.meetingUrl ?? undefined}

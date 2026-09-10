@@ -178,18 +178,21 @@ model LessonProgress {
 }
 
 model LiveClass {
-  id           String     @id @default(uuid())
-  title        String
-  topic        String
-  subject      String?
-  meetingUrl   String?
-  startsAt     DateTime
-  endsAt       DateTime
-  status       LiveStatus @default(Upcoming)
-  instructorId String
-  courseId     String?
-  course       Course?    @relation(fields: [courseId], references: [id])
-  instructor   Instructor @relation(fields: [instructorId], references: [id])
+  id              String     @id @default(uuid())
+  title           String
+  topic           String
+  subject         String?
+  meetingUrl      String?
+  /// Passcode for the meeting link, shown next to it for the host teacher and
+  /// the students who can attend. Optional: not every provider needs one.
+  meetingPassword String?
+  startsAt        DateTime
+  endsAt          DateTime
+  status          LiveStatus @default(Upcoming)
+  instructorId    String
+  courseId        String?
+  course          Course?    @relation(fields: [courseId], references: [id])
+  instructor      Instructor @relation(fields: [instructorId], references: [id])
 
   createdAt      DateTime       @default(now())
   approvalStatus ApprovalStatus @default(approved)

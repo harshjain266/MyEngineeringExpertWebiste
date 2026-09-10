@@ -15,11 +15,12 @@ import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StartClassButton } from "@/components/instructor/start-class-button";
+import { MeetingPasscode } from "@/components/ui/meeting-passcode";
 import { MaterialManager } from "@/components/course/material-manager";
 import { listCourseMaterials } from "@/lib/data";
 import { courseImage } from "@/lib/utils";
 
-type _LiveClass = { id: string; title: string; topic: string; status: string; startsAt: Date; endsAt: Date; subject: string | null; meetingUrl: string | null; courseId: string | null };
+type _LiveClass = { id: string; title: string; topic: string; status: string; startsAt: Date; endsAt: Date; subject: string | null; meetingUrl: string | null; meetingPassword: string | null; courseId: string | null };
 
 export const dynamic = "force-dynamic";
 
@@ -225,6 +226,10 @@ export default async function InstructorBatchDetailPage({ params }: Params) {
                             {course._count.enrollments} enrolled students
                           </span>
                         </div>
+
+                        {liveClass.meetingPassword ? (
+                          <MeetingPasscode value={liveClass.meetingPassword} className="mt-4" />
+                        ) : null}
                       </div>
                     </div>
 

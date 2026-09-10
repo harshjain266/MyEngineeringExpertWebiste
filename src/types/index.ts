@@ -59,6 +59,8 @@ export interface LiveClass {
   topic: string;
   subject?: string | null;
   meetingUrl?: string | null;
+  /** Passcode for the meeting link, when the provider needs one. */
+  meetingPassword?: string | null;
   instructor: Instructor;
   startsAt: string; // ISO
   endsAt: string; // ISO
@@ -196,6 +198,7 @@ export interface PendingLiveClass extends ReviewMeta {
   topic: string;
   subject?: string | null;
   meetingUrl?: string | null;
+  meetingPassword?: string | null;
   startsAt: string;
   endsAt: string;
   instructorName: string;
@@ -344,6 +347,7 @@ export interface AdminLiveClass {
   topic: string;
   subject?: string | null;
   meetingUrl?: string | null;
+  meetingPassword?: string | null;
   startsAt: string;
   endsAt: string;
   status: "Upcoming" | "Live" | "Ongoing" | "Completed";
@@ -351,6 +355,26 @@ export interface AdminLiveClass {
   instructorName: string;
   courseId?: string | null;
   courseTitle?: string | null;
+  approvalStatus: ApprovalStatus;
+  reviewNote?: string | null;
+}
+
+/**
+ * A master class as its host teacher sees it.
+ *
+ * No course, so no batch context — just the session, its join details and where
+ * it stands in review.
+ */
+export interface InstructorMasterClass {
+  id: string;
+  title: string;
+  topic: string;
+  subject?: string | null;
+  meetingUrl?: string | null;
+  meetingPassword?: string | null;
+  startsAt: string;
+  endsAt: string;
+  status: "Upcoming" | "Live" | "Ongoing" | "Completed";
   approvalStatus: ApprovalStatus;
   reviewNote?: string | null;
 }

@@ -11,12 +11,14 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
+import { getInstructorMasterClasses } from "@/lib/data";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { compactNumber } from "@/lib/utils";
 import ProfileForm from "@/app/instructor/settings/profile/profile-form";
 import { StartClassButton } from "@/components/instructor/start-class-button";
+import { MeetingPasscode } from "@/components/ui/meeting-passcode";
 import { avatarImage, courseImage } from "@/lib/utils";
 
 type _LiveClass = { id: string; title: string; topic: string; status: string; startsAt: Date; endsAt: Date; meetingUrl: string | null; courseId: string | null };
@@ -60,8 +62,15 @@ export default async function InstructorDashboardPage() {
     },
   });
 
+  // Master classes hang off the instructor, not a course, so they never appear
+  // in the batch query above — they are loaded separately.
+  const masterClasses = await getInstructorMasterClasses(user.id);
+
   const now = new Date();
   const batches = instructor?.courses ?? [];
+  const upcomingMasterClasses = masterClasses.filter(
+    (mc) => mc.status !== "Completed" && new Date(mc.endsAt) >= now,
+  );
   const allClasses = batches.flatMap((course: _BatchCourse) =>
     course.liveClasses.map((liveClass: _LiveClass) => ({ ...liveClass, course })),
   );
@@ -133,8 +142,8 @@ export default async function InstructorDashboardPage() {
             <MetricCard
               icon={Radio}
               label="Total Classes"
-              value={String(allClasses.length)}
-              hint={`${upcomingClasses.length} upcoming sessions`}
+              value={String(allClasses.length + masterClasses.length)}
+              hint={`${upcomingClasses.length + upcomingMasterClasses.length} upcoming · ${masterClasses.length} master ${masterClasses.length === 1 ? "class" : "classes"}`}
             />
             <MetricCard
               icon={Users}
@@ -179,6 +188,73 @@ export default async function InstructorDashboardPage() {
                 <Button disabled>Class Link Missing</Button>
               )}
             </div>
+          </div>
+        </section>
+      ) : null}
+
+      {upcomingMasterClasses.length > 0 ? (
+        <section className="rounded-3xl border border-surface-muted bg-white p-5 shadow-soft sm:p-6">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-50 text-emerald-700">
+                <GraduationCap size={21} />
+              </span>
+              <div>
+                <h2 className="font-display text-xl font-bold text-ink">Your Master Classes</h2>
+                <p className="mt-0.5 text-sm text-ink-muted">
+                  Free sessions an admin scheduled with you — open to every student.
+                </p>
+              </div>
+            </div>
+            <Link href="/instructor/master-classes">
+              <Button variant="secondary" size="sm">
+                View all <ArrowRight size={15} />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid gap-3">
+            {upcomingMasterClasses.slice(0, 3).map((mc) => (
+              <div
+                key={mc.id}
+                className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="brand">Master Class</Badge>
+                    <span className="text-xs font-semibold text-ink-muted">
+                      {formatClassTime(new Date(mc.startsAt))}
+                    </span>
+                    {mc.approvalStatus !== "approved" ? (
+                      <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                        Awaiting approval
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 truncate font-display text-base font-bold text-ink">
+                    {mc.title}
+                  </p>
+                  <p className="truncate text-sm text-ink-muted">{mc.topic}</p>
+                  {mc.meetingPassword ? (
+                    <MeetingPasscode value={mc.meetingPassword} className="mt-3 py-1" />
+                  ) : null}
+                </div>
+
+                <div className="shrink-0">
+                  {mc.meetingUrl ? (
+                    <StartClassButton
+                      liveClassId={mc.id}
+                      status={mc.status}
+                      disabled={mc.approvalStatus !== "approved"}
+                    />
+                  ) : (
+                    <Button disabled className="h-11">
+                      Class Link Missing
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       ) : null}

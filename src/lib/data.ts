@@ -8,7 +8,8 @@ import { PROGRAMS, PROGRAM_BY_SLUG } from "@/config/programs";
 import type { 
   Course, EnrolledCourse, LiveClass, LearningStats, Program, Announcement,
   AdminUser, AdminInstructor, AdminCourse, AdminAccount, AdminLiveClass, User,
-  PendingCourse, PendingLiveClass, PendingBlog, StudyMaterial, AppNotification
+  PendingCourse, PendingLiveClass, PendingBlog, StudyMaterial, AppNotification,
+  InstructorMasterClass
 } from "@/types";
 
 /**
@@ -361,9 +362,9 @@ export async function getLiveClassesByCourse(courseId: string): Promise<LiveClas
  * signed-in student. The paid, course-linked sessions live in
  * `getMyBatchLiveClasses` / `getLiveClassesByCourse`.
  */
-export async function getAllLiveClasses(): Promise<LiveClass[]> {
+export async function getAllLiveClasses(days = 7): Promise<LiveClass[]> {
   const dbLiveClasses = await prisma.liveClass.findMany({
-    where: { ...liveClassWindow(), courseId: null },
+    where: { ...liveClassWindow(days), courseId: null },
     include: { instructor: true },
     orderBy: { startsAt: "asc" },
     take: 20,
@@ -373,7 +374,7 @@ export async function getAllLiveClasses(): Promise<LiveClass[]> {
 }
 
 /** Every upcoming/ongoing class across the courses this student has bought. */
-export async function getMyBatchLiveClasses(): Promise<LiveClass[]> {
+export async function getMyBatchLiveClasses(days = 7): Promise<LiveClass[]> {
   const user = await getCurrentUser();
   if (!user) return [];
 
@@ -385,7 +386,7 @@ export async function getMyBatchLiveClasses(): Promise<LiveClass[]> {
 
   const dbLiveClasses = await prisma.liveClass.findMany({
     where: {
-      ...liveClassWindow(),
+      ...liveClassWindow(days),
       courseId: { in: enrollments.map((e) => e.courseId) },
     },
     include: { instructor: true, course: { select: { title: true, slug: true } } },
@@ -535,6 +536,7 @@ export async function getAdminLiveClasses(
     topic: (lc as any).topic,
     subject: (lc as any).subject ?? null,
     meetingUrl: (lc as any).meetingUrl ?? null,
+    meetingPassword: (lc as any).meetingPassword ?? null,
     startsAt: (lc as any).startsAt.toISOString(),
     endsAt: (lc as any).endsAt.toISOString(),
     status: (lc as any).status as any,
@@ -554,6 +556,43 @@ export async function getAdminLiveClasses(
  */
 export async function getAdminMasterClasses(user: User): Promise<AdminLiveClass[]> {
   return getAdminLiveClasses(user, { courseId: null });
+}
+
+/**
+ * Master classes a teacher is hosting.
+ *
+ * These hang off the instructor directly rather than off a course, so they are
+ * invisible to every query that walks `instructor.courses` — this is the only
+ * way the host teacher sees the sessions an admin scheduled for them.
+ *
+ * Pending and rejected rows are included on purpose: the teacher should know a
+ * class exists and is waiting on review, not be surprised when it appears.
+ */
+export async function getInstructorMasterClasses(userId: string): Promise<InstructorMasterClass[]> {
+  const instructor = await prisma.instructor.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+  if (!instructor) return [];
+
+  const rows = await prisma.liveClass.findMany({
+    where: { instructorId: instructor.id, courseId: null },
+    orderBy: { startsAt: "asc" },
+  });
+
+  return rows.map((lc) => ({
+    id: lc.id,
+    title: lc.title,
+    topic: lc.topic,
+    subject: lc.subject,
+    meetingUrl: lc.meetingUrl,
+    meetingPassword: lc.meetingPassword,
+    startsAt: lc.startsAt.toISOString(),
+    endsAt: lc.endsAt.toISOString(),
+    status: lc.status,
+    approvalStatus: lc.approvalStatus,
+    reviewNote: lc.reviewNote,
+  }));
 }
 
 /* ─── Approval queue ────────────────────────────────────────── */
@@ -635,6 +674,7 @@ export async function getApprovalQueue(user: User) {
     topic: lc.topic,
     subject: lc.subject,
     meetingUrl: lc.meetingUrl,
+    meetingPassword: lc.meetingPassword,
     startsAt: lc.startsAt.toISOString(),
     endsAt: lc.endsAt.toISOString(),
     instructorName: lc.instructor.name,

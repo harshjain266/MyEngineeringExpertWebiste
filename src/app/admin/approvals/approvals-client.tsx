@@ -319,6 +319,7 @@ export function ApprovalsClient({
                 ["Starts", formatDateTime(lc.startsAt)],
                 ["Ends", formatDateTime(lc.endsAt)],
                 ["Meeting link", lc.meetingUrl ? "Attached" : "Missing"],
+                ["Passcode", lc.meetingPassword ?? "None"],
                 ["Submitted by", lc.submittedByName ?? "—"],
               ]}
               note={lc.reviewNote}
@@ -784,6 +785,7 @@ function LiveClassEditForm({
     topic: row.topic,
     subject: row.subject ?? "",
     meetingUrl: row.meetingUrl ?? "",
+    meetingPassword: row.meetingPassword ?? "",
     startsAt: toDateTimeLocal(row.startsAt),
     endsAt: toDateTimeLocal(row.endsAt),
   });
@@ -839,14 +841,25 @@ function LiveClassEditForm({
             />
           </div>
         </div>
-        <div>
-          <label className={labelCls}>Meeting URL</label>
-          <input
-            value={form.meetingUrl}
-            onChange={set("meetingUrl")}
-            placeholder="https://meet.google.com/…"
-            className={inputCls}
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>Meeting URL</label>
+            <input
+              value={form.meetingUrl}
+              onChange={set("meetingUrl")}
+              placeholder="https://meet.google.com/…"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Meeting Password</label>
+            <input
+              value={form.meetingPassword}
+              onChange={set("meetingPassword")}
+              placeholder="Passcode (optional)"
+              className={inputCls}
+            />
+          </div>
         </div>
       </div>
 

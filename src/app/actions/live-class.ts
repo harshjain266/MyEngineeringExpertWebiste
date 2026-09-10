@@ -24,6 +24,13 @@ export async function startLiveClass(liveClassId: string) {
       return { success: false, error: "You can only start your own class." };
     }
 
+    if (liveClass.approvalStatus !== "approved") {
+      return {
+        success: false,
+        error: "This class is still waiting for admin approval.",
+      };
+    }
+
     if (!liveClass.meetingUrl) {
       return { success: false, error: "Meeting link is not available for this class." };
     }
@@ -35,6 +42,7 @@ export async function startLiveClass(liveClassId: string) {
 
     revalidatePath("/instructor/dashboard");
     revalidatePath("/instructor/batches");
+    revalidatePath("/instructor/master-classes");
     if (liveClass.course?.slug) {
       revalidatePath(`/instructor/batches/${liveClass.course.slug}`);
       revalidatePath(`/dashboard/my-courses/${liveClass.course.slug}`);
@@ -42,7 +50,11 @@ export async function startLiveClass(liveClassId: string) {
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/live-classes");
 
-    return { success: true, meetingUrl: liveClass.meetingUrl };
+    return {
+      success: true,
+      meetingUrl: liveClass.meetingUrl,
+      meetingPassword: liveClass.meetingPassword,
+    };
   } catch (error) {
     console.error("Failed to start live class:", error);
     return { success: false, error: "Could not start class. Please try again." };
