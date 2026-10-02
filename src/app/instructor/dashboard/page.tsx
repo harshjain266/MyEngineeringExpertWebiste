@@ -15,7 +15,7 @@ import { getInstructorMasterClasses } from "@/lib/data";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { compactNumber } from "@/lib/utils";
+import { compactNumber, formatISTDateTime } from "@/lib/utils";
 import ProfileForm from "@/app/instructor/settings/profile/profile-form";
 import { StartClassButton } from "@/components/instructor/start-class-button";
 import { MeetingPasscode } from "@/components/ui/meeting-passcode";
@@ -31,15 +31,7 @@ export const metadata = {
   title: "Instructor Dashboard",
 };
 
-function formatClassTime(date: Date) {
-  return date.toLocaleString("en-IN", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const formatClassTime = (date: Date) => formatISTDateTime(date);
 
 export default async function InstructorDashboardPage() {
   const user = await getCurrentUser();

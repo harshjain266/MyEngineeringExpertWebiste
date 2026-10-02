@@ -5,15 +5,13 @@ import { motion } from "framer-motion";
 import { ArrowRight, CalendarClock, Radio, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MeetingPasscode } from "@/components/ui/meeting-passcode";
+import { formatISTDate, formatISTTime, isISTToday } from "@/lib/utils";
 import type { LiveClass } from "@/types";
 
 function when(iso: string) {
-  const d = new Date(iso);
-  const today = new Date();
-  const isToday = d.toDateString() === today.toDateString();
-  const time = d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-  if (isToday) return `Today, ${time}`;
-  return `${d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}, ${time}`;
+  const time = formatISTTime(iso);
+  if (isISTToday(iso)) return `Today, ${time}`;
+  return `${formatISTDate(iso, { day: "numeric", year: undefined })}, ${time}`;
 }
 
 /**

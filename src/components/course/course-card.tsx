@@ -4,14 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { BookOpen, Clock, PlayCircle } from "lucide-react";
+import { BookOpen, Clock, Gift, PlayCircle } from "lucide-react";
 import type { Course } from "@/types";
 import { Button } from "@/components/ui/button";
 import { BuyNowButton } from "./buy-now-button";
-import { avatarImage, courseImage, formatINR } from "@/lib/utils";
+import { EnrollFreeButton } from "./enroll-free-button";
+import { avatarImage, cn, courseImage, formatINR } from "@/lib/utils";
 
 export function CourseCard({ course, index = 0 }: { course: Course; index?: number }) {
   const pathname = usePathname();
+  const isFree = course.status === "unpaid";
   return (
     <motion.article
       initial={{ opacity: 0, y: 24 }}
@@ -20,7 +22,12 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
       transition={{ duration: 0.5, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -6 }}
       whileTap={{ scale: 0.98 }}
-      className="group flex h-full flex-col overflow-hidden rounded-none border border-surface-muted bg-white shadow-soft transition-all duration-300 hover:border-brand-500 hover:shadow-glow active:border-brand-600"
+      className={cn(
+        "group flex h-full flex-col overflow-hidden rounded-none border bg-white shadow-soft transition-all duration-300",
+        isFree
+          ? "border-2 border-emerald-500 bg-gradient-to-b from-emerald-50 to-white ring-4 ring-emerald-500/15 hover:shadow-[0_0_28px_rgba(16,185,129,0.35)]"
+          : "border-surface-muted hover:border-brand-500 hover:shadow-glow active:border-brand-600",
+      )}
     >
       <Link href={`/courses/${course.slug}`} className="relative block aspect-[16/10] overflow-hidden">
         {course.thumbnail ? (
@@ -37,6 +44,11 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink/50 via-transparent to-transparent" />
+        {isFree && (
+          <span className="absolute left-2 top-2 flex items-center gap-1 rounded-sm bg-emerald-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md">
+            <Gift size={11} /> Free Master Course
+          </span>
+        )}
       </Link>
 
       <div className="flex flex-1 flex-col gap-2.5 p-3.5">
@@ -77,7 +89,16 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
             <Clock size={12} /> {course.durationHours} hrs
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="font-display text-base font-bold text-ink">{formatINR(course.price)}</span>
+            {isFree ? (
+              <>
+                {course.originalPrice > 0 && (
+                  <span className="text-[11px] text-ink-muted line-through">{formatINR(course.originalPrice)}</span>
+                )}
+                <span className="font-display text-base font-extrabold text-emerald-600">FREE</span>
+              </>
+            ) : (
+              <span className="font-display text-base font-bold text-ink">{formatINR(course.price)}</span>
+            )}
           </div>
         </div>
 
@@ -95,13 +116,24 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
                   Explore
                 </Button>
               </Link>
-              <BuyNowButton
-                size="sm"
-                className="w-full rounded-none h-8 text-xs"
-                course={{ courseId: course.id, courseTitle: course.title, amount: course.price }}
-              >
-                Buy
-              </BuyNowButton>
+              {isFree ? (
+                <EnrollFreeButton
+                  size="sm"
+                  className="h-8 w-full rounded-none bg-emerald-600 text-xs hover:bg-emerald-700"
+                  courseId={course.id}
+                  courseSlug={course.slug}
+                >
+                  Enroll Free
+                </EnrollFreeButton>
+              ) : (
+                <BuyNowButton
+                  size="sm"
+                  className="w-full rounded-none h-8 text-xs"
+                  course={{ courseId: course.id, courseTitle: course.title, amount: course.price }}
+                >
+                  Buy
+                </BuyNowButton>
+              )}
             </div>
           )}
         </div>

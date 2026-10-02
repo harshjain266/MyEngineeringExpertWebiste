@@ -99,3 +99,105 @@ export function isValidEmail(value: string): boolean {
 
 export const EMAIL_FORMAT_ERROR =
   "That email address doesn't look right. Use a format like name@example.com.";
+
+/* ─── India Standard Time ───────────────────────────────────────
+ *
+ * Every class on this platform is scheduled and attended in IST, so IST is the
+ * single source of truth for class times — not the server's timezone and not
+ * the viewer's device.
+ *
+ * Two bugs this prevents:
+ *   • On write, `new Date("2026-09-26T18:01")` (a `datetime-local` value, which
+ *     carries no offset) is parsed in the *runtime's* zone. On a UTC production
+ *     server an admin's 6:01 pm IST became 6:01 pm UTC — 11:31 pm IST.
+ *   • On read, `toLocaleString` with no `timeZone` renders in the *viewer's*
+ *     zone in the browser and in the *server's* zone during SSR, so the same
+ *     class showed two different times.
+ *
+ * IST has no daylight saving, so the fixed +05:30 offset below is always right.
+ */
+
+export const IST_TIME_ZONE = "Asia/Kolkata";
+const IST_OFFSET = "+05:30";
+
+/**
+ * Turn a `datetime-local` form value ("2026-09-26T18:01") into an exact instant,
+ * reading the wall-clock as IST rather than as the runtime's local time.
+ * Returns an invalid Date for unparseable input so callers can check it.
+ */
+export function istInputToDate(value: string): Date {
+  const trimmed = (value ?? "").trim();
+  // Accept "YYYY-MM-DDTHH:mm" and "YYYY-MM-DDTHH:mm:ss".
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(trimmed)) {
+    // Anything already carrying a zone (a full ISO string) is taken as-is.
+    return new Date(trimmed);
+  }
+  const withSeconds = trimmed.length === 16 ? `${trimmed}:00` : trimmed;
+  return new Date(`${withSeconds}${IST_OFFSET}`);
+}
+
+/** Render an instant as a `datetime-local` value in IST, for prefilling forms. */
+export function toISTInputValue(input: Date | string | number): string {
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: IST_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  // `hour` can come back as "24" for midnight in some runtimes.
+  const hour = get("hour") === "24" ? "00" : get("hour");
+  return `${get("year")}-${get("month")}-${get("day")}T${hour}:${get("minute")}`;
+}
+
+/** "05:00 pm" — always IST, whoever is looking. */
+export function formatISTTime(input: Date | string): string {
+  return new Date(input).toLocaleTimeString("en-IN", {
+    timeZone: IST_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** "Fri, 26 Sep 2026" — always IST. Pass options to drop the weekday or year. */
+export function formatISTDate(
+  input: Date | string,
+  options: Intl.DateTimeFormatOptions = {},
+): string {
+  return new Date(input).toLocaleDateString("en-IN", {
+    timeZone: IST_TIME_ZONE,
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    ...options,
+  });
+}
+
+/** "Fri, 26 Sep, 06:01 pm" — always IST. */
+export function formatISTDateTime(
+  input: Date | string,
+  options: Intl.DateTimeFormatOptions = {},
+): string {
+  return new Date(input).toLocaleString("en-IN", {
+    timeZone: IST_TIME_ZONE,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    ...options,
+  });
+}
+
+/** True when the instant falls on today's date in IST. */
+export function isISTToday(input: Date | string): boolean {
+  const key = (d: Date) =>
+    d.toLocaleDateString("en-CA", { timeZone: IST_TIME_ZONE });
+  return key(new Date(input)) === key(new Date());
+}

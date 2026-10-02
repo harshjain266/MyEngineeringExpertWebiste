@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StartClassButton } from "@/components/instructor/start-class-button";
 import { MeetingPasscode } from "@/components/ui/meeting-passcode";
+import { formatISTDate, formatISTTime } from "@/lib/utils";
 import type { InstructorMasterClass } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -22,18 +23,8 @@ export const metadata = {
   title: "My Master Classes",
 };
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-}
+const formatDate = (iso: string) => formatISTDate(iso);
+const formatTime = (iso: string) => formatISTTime(iso);
 
 const isLive = (mc: InstructorMasterClass) => mc.status === "Live" || mc.status === "Ongoing";
 
@@ -205,7 +196,7 @@ function ClassList({
                       </span>
                       <span className="flex items-center gap-2">
                         <Clock size={16} className="text-brand-700" />
-                        {formatTime(mc.startsAt)} – {formatTime(mc.endsAt)}
+                        {formatTime(mc.startsAt)} – {formatTime(mc.endsAt)} IST
                       </span>
                     </div>
 

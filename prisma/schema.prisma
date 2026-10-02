@@ -27,6 +27,12 @@ enum ApprovalStatus {
   rejected
 }
 
+/// paid → bought through Razorpay; unpaid → free master course, open enrollment.
+enum CourseStatus {
+  paid
+  unpaid
+}
+
 model User {
   id                      String                   @id @default(uuid())
   name                    String                   @default("Student")
@@ -124,6 +130,7 @@ model Course {
   plannerUrl    String?
   popular       Boolean         @default(false)
   disabled      Boolean         @default(false)
+  status        CourseStatus    @default(paid)
   instructor    Instructor      @relation(fields: [instructorId], references: [id])
   enrollments   Enrollment[]
   lessons       Lesson[]

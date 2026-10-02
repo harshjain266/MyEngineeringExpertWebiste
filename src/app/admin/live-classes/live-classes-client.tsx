@@ -15,7 +15,7 @@ import {
   Video,
 } from "lucide-react";
 import { createLiveClass } from "@/app/actions/admin";
-import { cn } from "@/lib/utils";
+import { cn, formatISTDate, formatISTTime, toISTInputValue } from "@/lib/utils";
 import { MeetingPasscode } from "@/components/ui/meeting-passcode";
 import type { AdminLiveClass } from "@/types";
 
@@ -48,10 +48,9 @@ const statusStyles: Record<string, { label: string; cls: string }> = {
   Upcoming: { label: "Upcoming", cls: "bg-amber-50 text-amber-700" },
 };
 
+/** Default form value, in IST — the zone every class is scheduled in. */
 function toDateTimeLocal(offsetMinutes = 0) {
-  const d = new Date(Date.now() + offsetMinutes * 60 * 1000);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return toISTInputValue(Date.now() + offsetMinutes * 60 * 1000);
 }
 
 export function AdminLiveClassesClient({ instructors, courses, liveClasses }: Props) {
@@ -276,7 +275,7 @@ export function AdminLiveClassesClient({ instructors, courses, liveClasses }: Pr
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>Starts At *</label>
+                <label className={labelCls}>Starts At * (IST)</label>
                 <input
                   required
                   type="datetime-local"
@@ -286,7 +285,7 @@ export function AdminLiveClassesClient({ instructors, courses, liveClasses }: Pr
                 />
               </div>
               <div>
-                <label className={labelCls}>Ends At *</label>
+                <label className={labelCls}>Ends At * (IST)</label>
                 <input
                   required
                   type="datetime-local"
@@ -409,15 +408,5 @@ export function AdminLiveClassesClient({ instructors, courses, liveClasses }: Pr
   );
 }
 
-function formatDay(iso: string) {
-  return new Date(iso).toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-}
+const formatDay = (iso: string) => formatISTDate(iso);
+const formatTime = (iso: string) => formatISTTime(iso);

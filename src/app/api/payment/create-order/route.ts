@@ -33,6 +33,7 @@ export async function POST(req: Request) {
         where: { id: courseId },
         select: {
           price: true,
+          status: true,
           disabled: true,
           approvalStatus: true,
           instructor: true,
@@ -59,6 +60,14 @@ export async function POST(req: Request) {
       if (course.disabled || course.approvalStatus !== "approved") {
         return NextResponse.json(
           { error: "This course is not available for purchase right now." },
+          { status: 409 },
+        );
+      }
+
+      // Free master courses never go through Razorpay.
+      if (course.status === "unpaid") {
+        return NextResponse.json(
+          { error: "This course is free — use Enroll for Free instead." },
           { status: 409 },
         );
       }

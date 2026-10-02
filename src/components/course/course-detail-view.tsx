@@ -10,6 +10,7 @@ import {
   Check,
   Clock,
   Download,
+  Gift,
   Laptop,
   Shield,
   Sparkles,
@@ -19,6 +20,7 @@ import type { Course, CourseDetail } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BuyNowButton } from "@/components/course/buy-now-button";
+import { EnrollFreeButton } from "@/components/course/enroll-free-button";
 import { avatarImage, courseImage, formatINR } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +43,7 @@ export function CourseDetailView({
   detail: CourseDetail;
   isPurchased?: boolean;
 }) {
+  const isFree = course.status === "unpaid";
   const filteredTabs = TABS.filter((tab) => !isPurchased || tab.id !== "features");
   const [activeTab, setActiveTab] = useState<TabId>(isPurchased ? "about" : "features");
   const isManualScrolling = useRef(false);
@@ -162,7 +165,7 @@ export function CourseDetailView({
         <div className="min-w-0 space-y-10">
           {!isPurchased && (
             <section id="features" className="scroll-mt-32">
-              <FeaturesPanel course={course} detail={detail} />
+              <FeaturesPanel course={course} detail={detail} isFree={isFree} />
             </section>
           )}
           <section id="about" className="scroll-mt-32">
@@ -181,7 +184,12 @@ export function CourseDetailView({
 
         {/* Sticky purchase card */}
         <aside className="lg:sticky lg:top-32 lg:self-start">
-          <div className="overflow-hidden rounded-2xl border border-surface-muted bg-white shadow-card">
+          <div
+            className={cn(
+              "overflow-hidden rounded-2xl border bg-white shadow-card",
+              isFree ? "border-2 border-emerald-500 ring-4 ring-emerald-500/15" : "border-surface-muted",
+            )}
+          >
             <div className="relative aspect-[16/9]">
               <Image
                 src={courseImage(course.thumbnail)}
@@ -193,6 +201,11 @@ export function CourseDetailView({
               <span className="absolute left-3 top-3 rounded-md bg-brand-700 px-2 py-0.5 text-xs font-bold text-white">
                 ONLINE
               </span>
+              {isFree && (
+                <span className="absolute right-3 top-3 flex items-center gap-1 rounded-md bg-emerald-500 px-2 py-0.5 text-xs font-bold uppercase text-white shadow-md">
+                  <Gift size={12} /> Free Master Course
+                </span>
+              )}
             </div>
             <div className="space-y-3 p-4">
               <h3 className="font-display text-lg font-bold text-ink">{course.title}</h3>
@@ -202,7 +215,23 @@ export function CourseDetailView({
               <p className="flex items-center gap-1.5 text-sm text-ink-muted">
                 <CalendarDays size={14} /> {detail.startsOn} – {detail.endsOn}
               </p>
-              {!isPurchased && (
+              {!isPurchased && isFree && (
+                <>
+                  <div className="flex items-baseline gap-2 border-t border-surface-muted pt-3">
+                    <span className="font-display text-2xl font-extrabold text-emerald-600">FREE</span>
+                    {course.originalPrice > 0 && (
+                      <span className="text-sm text-ink-muted line-through">{formatINR(course.originalPrice)}</span>
+                    )}
+                  </div>
+                  <EnrollFreeButton
+                    size="lg"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                    courseId={course.id}
+                    courseSlug={course.slug}
+                  />
+                </>
+              )}
+              {!isPurchased && !isFree && (
                 <>
                   <div className="flex items-baseline gap-2 border-t border-surface-muted pt-3">
                     <span className="font-display text-2xl font-bold text-brand-700">
@@ -280,58 +309,90 @@ const PLAN_THEMES = [
   },
 ] as const;
 
-function FeaturesPanel({ course, detail }: { course: Course; detail: CourseDetail }) {
+function FeaturesPanel({
+  course,
+  detail,
+  isFree,
+}: {
+  course: Course;
+  detail: CourseDetail;
+  isFree: boolean;
+}) {
   return (
     <div className="space-y-6">
-      <Card title="Batch Features">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {detail.plans.map((plan, i) => {
-            const theme = PLAN_THEMES[i % PLAN_THEMES.length];
-            return (
-              <div
-                key={`${plan.name}-${i}`}
-                className={cn(
-                  "relative flex flex-col overflow-hidden rounded-2xl border shadow-md",
-                  theme.card,
-                )}
-              >
-                {plan.popular && (
-                  <span className="absolute right-3 top-3 rounded-full bg-emerald-400 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-900">
-                    Most Popular
-                  </span>
-                )}
-                <div className={cn("px-5 pt-5 pb-4", theme.header)}>
-                  <h3 className={cn("font-display text-xl font-bold", theme.title)}>
-                    {plan.name}
-                  </h3>
-                  <p className={cn("mt-1 font-display text-2xl font-extrabold", theme.price)}>
-                    {formatINR(plan.price)}
-                  </p>
+      {isFree ? (
+        <section className="rounded-2xl border-2 border-emerald-500 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-soft">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700">
+                <Gift size={14} /> Free Master Course
+              </p>
+              <h2 className="mt-1 font-display text-xl font-bold text-ink">
+                Join {course.title} — completely free
+              </h2>
+              <p className="mt-1 text-sm text-ink-muted">
+                No payment needed. Enroll in one click and start learning right away.
+              </p>
+            </div>
+            <EnrollFreeButton
+              size="lg"
+              className="bg-emerald-600 hover:bg-emerald-700"
+              courseId={course.id}
+              courseSlug={course.slug}
+            />
+          </div>
+        </section>
+      ) : (
+        <Card title="Batch Features">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {detail.plans.map((plan, i) => {
+              const theme = PLAN_THEMES[i % PLAN_THEMES.length];
+              return (
+                <div
+                  key={`${plan.name}-${i}`}
+                  className={cn(
+                    "relative flex flex-col overflow-hidden rounded-2xl border shadow-md",
+                    theme.card,
+                  )}
+                >
+                  {plan.popular && (
+                    <span className="absolute right-3 top-3 rounded-full bg-emerald-400 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-900">
+                      Most Popular
+                    </span>
+                  )}
+                  <div className={cn("px-5 pt-5 pb-4", theme.header)}>
+                    <h3 className={cn("font-display text-xl font-bold", theme.title)}>
+                      {plan.name}
+                    </h3>
+                    <p className={cn("mt-1 font-display text-2xl font-extrabold", theme.price)}>
+                      {formatINR(plan.price)}
+                    </p>
+                  </div>
+                  <ul className="flex-1 space-y-2.5 px-5 py-4">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5 text-sm">
+                        <Check size={15} className={cn("mt-0.5 shrink-0", theme.check)} />
+                        <span className={theme.feature}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="px-5 pb-5">
+                    <BuyNowButton
+                      className={cn(
+                        "w-full rounded-xl py-2.5 text-sm font-semibold transition-colors border-0",
+                        theme.btn,
+                      )}
+                      course={{ courseId: course.id, courseTitle: course.title, amount: plan.price, planName: plan.name }}
+                    >
+                      Continue with {plan.name}
+                    </BuyNowButton>
+                  </div>
                 </div>
-                <ul className="flex-1 space-y-2.5 px-5 py-4">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm">
-                      <Check size={15} className={cn("mt-0.5 shrink-0", theme.check)} />
-                      <span className={theme.feature}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="px-5 pb-5">
-                  <BuyNowButton
-                    className={cn(
-                      "w-full rounded-xl py-2.5 text-sm font-semibold transition-colors border-0",
-                      theme.btn,
-                    )}
-                    course={{ courseId: course.id, courseTitle: course.title, amount: plan.price, planName: plan.name }}
-                  >
-                    Continue with {plan.name}
-                  </BuyNowButton>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       <Card title="What you get">
         <ul className="grid gap-3 sm:grid-cols-2">

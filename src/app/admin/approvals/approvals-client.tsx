@@ -26,7 +26,13 @@ import {
   updateLiveClassFromReview,
 } from "@/app/actions/approvals";
 import { PROGRAMS } from "@/config/programs";
-import { cn, formatINR } from "@/lib/utils";
+import {
+  cn,
+  formatINR,
+  formatISTDate,
+  formatISTDateTime,
+  toISTInputValue,
+} from "@/lib/utils";
 import type {
   ApprovalStatus,
   PendingBlog,
@@ -68,28 +74,18 @@ const STATUS_STYLES: Record<ApprovalStatus, { label: string; cls: string }> = {
 
 function formatDate(iso?: string | null) {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return formatISTDate(iso, { weekday: undefined });
 }
 
 function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatISTDateTime(iso, { weekday: undefined, day: "2-digit" });
 }
 
-/** `datetime-local` wants a local wall-clock string, not an ISO UTC one. */
-function toDateTimeLocal(iso: string) {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+/**
+ * `datetime-local` wants a bare wall-clock string. Prefill it in IST, which is
+ * also how `updateLiveClassFromReview` reads the value back on save.
+ */
+const toDateTimeLocal = (iso: string) => toISTInputValue(iso);
 
 function toDateInput(iso?: string | null) {
   return iso ? new Date(iso).toISOString().slice(0, 10) : "";
@@ -287,7 +283,12 @@ export function ApprovalsClient({
               subtitle={`${c.instructorName} · ${c.category} · ${c.level}`}
               facts={[
                 ["Program", c.program],
-                ["Price", `${formatINR(c.price)} (was ${formatINR(c.originalPrice)})`],
+                [
+                  "Price",
+                  c.status === "unpaid"
+                    ? "Free master course"
+                    : `${formatINR(c.price)} (was ${formatINR(c.originalPrice)})`,
+                ],
                 ["Duration", `${c.durationHours}h · ${c.lectures} lectures`],
                 ["Starts", formatDate(c.startsOn) ?? "Not set"],
                 ["Submitted by", c.submittedByName ?? "—"],
@@ -626,6 +627,7 @@ function CourseEditForm({
     category: row.category,
     level: row.level,
     program: row.program,
+    status: row.status,
     price: String(row.price),
     originalPrice: String(row.originalPrice),
     durationHours: String(row.durationHours),
@@ -651,7 +653,8 @@ function CourseEditForm({
           category: form.category,
           level: form.level as PendingCourse["level"],
           program: form.program as Parameters<typeof updateCourseFromReview>[1]["program"],
-          price: Number(form.price) || 0,
+          status: form.status,
+          price: form.status === "unpaid" ? 0 : Number(form.price) || 0,
           originalPrice: Number(form.originalPrice) || 0,
           durationHours: Number(form.durationHours) || 1,
           lectures: Number(form.lectures) || 1,
@@ -710,13 +713,17 @@ function CourseEditForm({
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className={labelCls}>Status</label>
+          <select value={form.status} onChange={set("status")} className={inputCls}>
+            <option value="paid">Paid</option>
+            <option value="unpaid">Unpaid — Free Master Course</option>
+          </select>
+        </div>
+
+        {form.status === "unpaid" ? (
           <div>
-            <label className={labelCls}>Price (₹)</label>
-            <input type="number" min={0} value={form.price} onChange={set("price")} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Original Price (₹)</label>
+            <label className={labelCls}>Course Worth (₹) — optional, shown struck-through</label>
             <input
               type="number"
               min={0}
@@ -725,7 +732,24 @@ function CourseEditForm({
               className={inputCls}
             />
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Price (₹)</label>
+              <input type="number" min={0} value={form.price} onChange={set("price")} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Original Price (₹)</label>
+              <input
+                type="number"
+                min={0}
+                value={form.originalPrice}
+                onChange={set("originalPrice")}
+                className={inputCls}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-3 gap-4">
           <div>

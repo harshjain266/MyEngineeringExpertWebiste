@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { createCourse } from "@/app/actions/admin";
 import { PROGRAMS } from "@/config/programs";
-import { cn, formatINR } from "@/lib/utils";
+import { cn, formatINR, formatISTDate } from "@/lib/utils";
 import type { AdminCourse } from "@/types";
 
 interface InstructorOption {
@@ -55,6 +55,7 @@ export function AdminCoursesClient({ instructors, courses }: Props) {
     program: "btech_bca",
     category: "Computer Science",
     level: "Beginner" as (typeof LEVELS)[number],
+    status: "paid" as "paid" | "unpaid",
     price: "",
     originalPrice: "",
     durationHours: "1",
@@ -88,8 +89,9 @@ export function AdminCoursesClient({ instructors, courses }: Props) {
       program: form.program as any,
       category: form.category,
       level: form.level,
-      price: Number(form.price) || 0,
-      originalPrice: Number(form.originalPrice) || Number(form.price) || 0,
+      status: form.status,
+      price: form.status === "unpaid" ? 0 : Number(form.price) || 0,
+      originalPrice: Number(form.originalPrice) || (form.status === "unpaid" ? 0 : Number(form.price)) || 0,
       durationHours: Number(form.durationHours) || 1,
       lectures: Number(form.lectures) || 1,
       language: form.language,
@@ -242,20 +244,17 @@ export function AdminCoursesClient({ instructors, courses }: Props) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Status</label>
+              <select value={form.status} onChange={set("status")} className={inputCls}>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Unpaid — Free Master Course</option>
+              </select>
+            </div>
+
+            {form.status === "unpaid" ? (
               <div>
-                <label className={labelCls}>Price (₹)</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={form.price}
-                  onChange={set("price")}
-                  placeholder="1499"
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Original Price (₹)</label>
+                <label className={labelCls}>Course Worth (₹) — optional, shown struck-through</label>
                 <input
                   type="number"
                   min={0}
@@ -264,8 +263,36 @@ export function AdminCoursesClient({ instructors, courses }: Props) {
                   placeholder="2999"
                   className={inputCls}
                 />
+                <p className="mt-1.5 text-xs text-emerald-700">
+                  Free master course — no payment. Any student can enroll for free.
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Price (₹)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.price}
+                    onChange={set("price")}
+                    placeholder="1499"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Original Price (₹)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.originalPrice}
+                    onChange={set("originalPrice")}
+                    placeholder="2999"
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-3 gap-4">
               <div>
@@ -379,6 +406,11 @@ export function AdminCoursesClient({ instructors, courses }: Props) {
                             Hidden
                           </span>
                         )}
+                        {c.status === "unpaid" && (
+                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                            Free
+                          </span>
+                        )}
                         {c.approvalStatus === "pending" && (
                           <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                             Awaiting approval
@@ -400,7 +432,9 @@ export function AdminCoursesClient({ instructors, courses }: Props) {
                         <span className="flex items-center gap-1">
                           <GraduationCap size={11} /> {c.program}
                         </span>
-                        <span className="font-semibold text-brand-700">{formatINR(c.price)}</span>
+                        <span className="font-semibold text-brand-700">
+                          {c.status === "unpaid" ? "Free" : formatINR(c.price)}
+                        </span>
                         <span className="flex items-center gap-1">
                           <Video size={11} /> {c.enrollmentCount} enrolled
                         </span>
@@ -428,10 +462,4 @@ export function AdminCoursesClient({ instructors, courses }: Props) {
   );
 }
 
-function formatDatePretty(iso: string) {
-  return new Date(iso).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+const formatDatePretty = (iso: string) => formatISTDate(iso, { weekday: undefined });

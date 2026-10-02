@@ -6,9 +6,11 @@ import { isSuperAdmin } from "@/lib/roles";
 import { prisma } from "@/lib/db";
 import { notifyCourseSubmitted, notifyLiveClassSubmitted } from "@/lib/notify";
 import { announceLiveClass, announceSubmission } from "@/lib/notifications";
+import { istInputToDate } from "@/lib/utils";
 
 type Level = "Beginner" | "Intermediate" | "Advanced";
 type Program = "btech_bca" | "dsa" | "aptitude" | "gate" | "web_dev";
+type CourseStatus = "paid" | "unpaid";
 
 function slugify(input: string) {
   return input
@@ -41,6 +43,8 @@ export interface CreateCourseInput {
   title: string;
   category: string;
   level: Level;
+  /** Defaults to "paid". "unpaid" makes it a free master course. */
+  status?: CourseStatus;
   price: number;
   originalPrice: number;
   durationHours: number;
@@ -66,6 +70,10 @@ export async function createCourse(input: CreateCourseInput) {
     if (!input.title || !input.title.trim()) {
       return { success: false, error: "Course title is required." };
     }
+    const status: CourseStatus = input.status === "unpaid" ? "unpaid" : "paid";
+    // A free master course is never charged, whatever the form sent.
+    if (status === "unpaid") input.price = 0;
+
     if (input.price < 0 || input.originalPrice < 0 || input.price > input.originalPrice && input.originalPrice > 0) {
       return { success: false, error: "Price must be lower than or equal to the original price." };
     }
@@ -82,6 +90,7 @@ export async function createCourse(input: CreateCourseInput) {
         title: input.title.trim(),
         category: input.category || "Computer Science",
         level: input.level,
+        status,
         price: Math.round(input.price),
         originalPrice: Math.round(Math.max(input.originalPrice, input.price)),
         durationHours: input.durationHours || 1,
@@ -175,8 +184,11 @@ export async function createLiveClass(input: CreateLiveClassInput) {
       return { success: false, error: "Class topic is required." };
     }
 
-    const startsAt = new Date(input.startsAt);
-    const endsAt = new Date(input.endsAt);
+    // The form sends a bare wall-clock ("2026-10-05T17:00"), which carries no
+    // offset. Read it as IST so the stored instant is the same whether this runs
+    // on a UTC production server or a developer's machine.
+    const startsAt = istInputToDate(input.startsAt);
+    const endsAt = istInputToDate(input.endsAt);
     if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) {
       return { success: false, error: "Please provide valid start and end times." };
     }

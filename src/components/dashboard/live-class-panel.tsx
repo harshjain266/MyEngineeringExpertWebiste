@@ -10,21 +10,10 @@ import { Button } from "@/components/ui/button";
 import { MasterClassBadge } from "@/components/ui/master-class-badge";
 import { MeetingPasscode } from "@/components/ui/meeting-passcode";
 import { SectionHeader } from "@/components/dashboard/section-header";
-import { avatarImage } from "@/lib/utils";
+import { avatarImage, formatISTDate, formatISTTime } from "@/lib/utils";
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-  });
-}
+const formatTime = (iso: string) => formatISTTime(iso);
+const formatDate = (iso: string) => formatISTDate(iso, { weekday: undefined, year: undefined });
 
 export function LiveClassPanel({
   liveClasses,

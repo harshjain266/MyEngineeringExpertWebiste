@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { BookOpen, Clock, PlayCircle, Signal } from "lucide-react";
+import { BookOpen, Clock, Gift, PlayCircle, Signal } from "lucide-react";
 import type { Course } from "@/types";
 import { BuyNowButton } from "@/components/course/buy-now-button";
+import { EnrollFreeButton } from "@/components/course/enroll-free-button";
 import { formatINR } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -27,11 +28,14 @@ export function ProgramCourseCard({
 }) {
   const href = `/courses/${course.slug}`;
   const pathname = usePathname();
-  const theme = CATEGORY_THEME[course.category] ?? {
-    gradient: "from-brand-600 to-indigo-800",
-    chip: "bg-white/20 text-white",
-    icon: "📚",
-  };
+  const isFree = course.status === "unpaid";
+  const theme = isFree
+    ? { gradient: "from-emerald-500 to-teal-700", chip: "bg-white/20 text-white", icon: "🎁" }
+    : CATEGORY_THEME[course.category] ?? {
+        gradient: "from-brand-600 to-indigo-800",
+        chip: "bg-white/20 text-white",
+        icon: "📚",
+      };
 
   return (
     <motion.article
@@ -40,14 +44,26 @@ export function ProgramCourseCard({
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.45, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
       whileTap={{ scale: 0.98 }}
-      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-surface-muted bg-white shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-brand-500 hover:shadow-glow active:border-brand-600"
+      className={cn(
+        "group flex h-full flex-col overflow-hidden rounded-2xl border bg-white shadow-soft transition-all duration-300 hover:-translate-y-1",
+        isFree
+          ? "border-2 border-emerald-500 ring-4 ring-emerald-500/15 hover:shadow-[0_0_28px_rgba(16,185,129,0.35)]"
+          : "border-surface-muted hover:border-brand-500 hover:shadow-glow active:border-brand-600",
+      )}
     >
       {/* ── Gradient header ── */}
       <Link href={href} className={cn("relative flex h-36 flex-col justify-between bg-gradient-to-br p-5", theme.gradient)}>
         {/* Category chip */}
-        <span className={cn("self-start rounded-full px-3 py-1 text-[11px] font-semibold backdrop-blur-sm", theme.chip)}>
-          {course.category}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={cn("self-start rounded-full px-3 py-1 text-[11px] font-semibold backdrop-blur-sm", theme.chip)}>
+            {course.category}
+          </span>
+          {isFree && (
+            <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700 shadow">
+              <Gift size={11} /> Free Master Course
+            </span>
+          )}
+        </div>
 
         {/* Big emoji icon + initials */}
         <div className="flex items-end justify-between">
@@ -92,9 +108,18 @@ export function ProgramCourseCard({
 
         {/* Price + actions */}
         <div className="mt-auto border-t border-surface-muted/60 pt-3">
-          <p className="mb-3 font-display text-xl font-extrabold text-ink">
-            {formatINR(course.price)}
-          </p>
+          {isFree ? (
+            <p className="mb-3 flex items-baseline gap-2">
+              <span className="font-display text-xl font-extrabold text-emerald-600">FREE</span>
+              {course.originalPrice > 0 && (
+                <span className="text-sm text-ink-muted line-through">{formatINR(course.originalPrice)}</span>
+              )}
+            </p>
+          ) : (
+            <p className="mb-3 font-display text-xl font-extrabold text-ink">
+              {formatINR(course.price)}
+            </p>
+          )}
           {course.isEnrolled ? (
             <Link
               href={`/dashboard/my-courses/${course.slug}`}
@@ -110,13 +135,24 @@ export function ProgramCourseCard({
               >
                 Explore
               </Link>
-              <BuyNowButton
-                size="sm"
-                className="h-9 w-full rounded-xl text-xs font-semibold"
-                course={{ courseId: course.id, courseTitle: course.title, amount: course.price }}
-              >
-                Buy Now
-              </BuyNowButton>
+              {isFree ? (
+                <EnrollFreeButton
+                  size="sm"
+                  className="h-9 w-full rounded-xl bg-emerald-600 text-xs font-semibold hover:bg-emerald-700"
+                  courseId={course.id}
+                  courseSlug={course.slug}
+                >
+                  Enroll for Free
+                </EnrollFreeButton>
+              ) : (
+                <BuyNowButton
+                  size="sm"
+                  className="h-9 w-full rounded-xl text-xs font-semibold"
+                  course={{ courseId: course.id, courseTitle: course.title, amount: course.price }}
+                >
+                  Buy Now
+                </BuyNowButton>
+              )}
             </div>
           )}
         </div>

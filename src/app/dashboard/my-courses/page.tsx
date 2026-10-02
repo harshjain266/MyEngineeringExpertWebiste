@@ -16,7 +16,7 @@ import { getDashboardData, getMyBatchLiveClasses } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
-import { courseImage } from "@/lib/utils";
+import { courseImage, formatISTDate } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "My Courses" };
 
@@ -25,7 +25,7 @@ function lastSeen(iso: string) {
   if (days <= 0) return "Today";
   if (days === 1) return "Yesterday";
   if (days < 30) return `${days} days ago`;
-  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  return formatISTDate(iso, { day: "numeric", weekday: undefined, year: undefined });
 }
 
 export default async function MyCoursesPage() {

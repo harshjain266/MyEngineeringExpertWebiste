@@ -317,3 +317,24 @@ export function announceEnrollment({
     dedupeKey: `order:${orderId}`,
   });
 }
+
+/** Welcome note after a student joins a free master course (no payment involved). */
+export function announceFreeEnrollment({
+  userId,
+  courseId,
+  courseTitle,
+  courseSlug,
+}: {
+  userId: string;
+  courseId: string;
+  courseTitle: string;
+  courseSlug?: string | null;
+}) {
+  return notifyUser(userId, {
+    type: "order",
+    title: `You're enrolled in ${courseTitle}`,
+    body: "Welcome to this free master course. Your live classes and study material are ready.",
+    href: courseSlug ? `/dashboard/my-courses/${courseSlug}` : "/dashboard/my-courses",
+    dedupeKey: `free-enroll:${userId}:${courseId}`,
+  });
+}

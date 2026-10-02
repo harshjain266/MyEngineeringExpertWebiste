@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { compactNumber, courseImage } from "@/lib/utils";
+import { compactNumber, courseImage, formatISTDateTime } from "@/lib/utils";
 
 type _LiveClass = { id: string; title: string; topic: string; status: string; startsAt: Date; endsAt: Date; meetingUrl: string | null; courseId: string | null };
 type _BatchCourse = { id: string; slug: string; title: string; thumbnail: string | null; category: string; level: string; durationHours: number | null; lectures: number | null; liveClasses: _LiveClass[]; _count: { enrollments: number; liveClasses: number } };
@@ -16,15 +16,7 @@ export const metadata = {
   title: "My Batches",
 };
 
-function formatClassTime(date: Date) {
-  return date.toLocaleString("en-IN", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const formatClassTime = (date: Date) => formatISTDateTime(date);
 
 export default async function InstructorBatchesPage() {
   const user = await getCurrentUser();

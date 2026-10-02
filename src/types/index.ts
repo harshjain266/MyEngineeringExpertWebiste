@@ -2,6 +2,9 @@
 
 export type Level = "Beginner" | "Intermediate" | "Advanced";
 
+/** paid → sold via Razorpay; unpaid → free master course anyone can join. */
+export type CourseStatus = "paid" | "unpaid";
+
 export type CourseCategory =
   | "Computer Science"
   | "Electronics"
@@ -43,6 +46,7 @@ export interface Course {
   tags: string[];
   plannerUrl?: string;
   popular?: boolean;
+  status?: CourseStatus;
   enrollmentCount?: number;
   isEnrolled?: boolean;
 }
@@ -176,6 +180,7 @@ export interface PendingCourse extends ReviewMeta {
   id: string;
   slug: string;
   title: string;
+  status: CourseStatus;
   category: string;
   program: string;
   level: Level;
@@ -331,6 +336,7 @@ export interface AdminCourse {
   category: string;
   program: string;
   price: number;
+  status: CourseStatus;
   disabled: boolean;
   instructorName: string;
   enrollmentCount: number;

@@ -15,6 +15,7 @@ import {
   getCourseMaterialsForStudent,
 } from "@/lib/data";
 import { Button } from "@/components/ui/button";
+import { formatISTDate, formatISTTime } from "@/lib/utils";
 import { MeetingPasscode } from "@/components/ui/meeting-passcode";
 import { Badge } from "@/components/ui/badge";
 
@@ -139,11 +140,11 @@ export default async function CourseLiveClassesPage({ params }: Params) {
                           <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-soft">
                             <span className="flex items-center gap-2">
                               <Calendar size={16} className="text-brand-600" />
-                              {new Date(lc.startsAt).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+                              {formatISTDate(lc.startsAt, { day: "numeric", year: undefined })}
                             </span>
                             <span className="flex items-center gap-2">
                               <Clock size={16} className="text-brand-600" />
-                              {new Date(lc.startsAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} – {new Date(lc.endsAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              {formatISTTime(lc.startsAt)} – {formatISTTime(lc.endsAt)} IST
                             </span>
                             <span className="flex items-center gap-2">
                               <User size={16} className="text-brand-600" />

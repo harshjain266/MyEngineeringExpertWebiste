@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StartClassButton } from "@/components/instructor/start-class-button";
 import { MeetingPasscode } from "@/components/ui/meeting-passcode";
+import { formatISTDate, formatISTTime } from "@/lib/utils";
 import { MaterialManager } from "@/components/course/material-manager";
 import { listCourseMaterials } from "@/lib/data";
 import { courseImage } from "@/lib/utils";
@@ -28,21 +29,8 @@ interface Params {
   params: Promise<{ slug: string }>;
 }
 
-function formatDate(date: Date) {
-  return date.toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatTime(date: Date) {
-  return date.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const formatDate = (date: Date) => formatISTDate(date);
+const formatTime = (date: Date) => formatISTTime(date);
 
 function statusVariant(status: string): "live" | "neutral" | "warning" {
   if (status === "Live" || status === "Ongoing") return "live";
@@ -219,7 +207,7 @@ export default async function InstructorBatchDetailPage({ params }: Params) {
                           </span>
                           <span className="flex items-center gap-2">
                             <Clock size={16} className="text-brand-700" />
-                            {formatTime(liveClass.startsAt)} - {formatTime(liveClass.endsAt)}
+                            {formatTime(liveClass.startsAt)} - {formatTime(liveClass.endsAt)} IST
                           </span>
                           <span className="flex items-center gap-2">
                             <Users size={16} className="text-brand-700" />

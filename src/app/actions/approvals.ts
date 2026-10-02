@@ -10,6 +10,7 @@ import {
   announceDecision,
   announceLiveClass,
 } from "@/lib/notifications";
+import { istInputToDate } from "@/lib/utils";
 import { buildExcerpt, readingMinutes } from "@/lib/blog";
 import type { User } from "@/types";
 
@@ -155,6 +156,7 @@ export interface CourseEditInput {
   category: string;
   level: "Beginner" | "Intermediate" | "Advanced";
   program: "btech_bca" | "dsa" | "aptitude" | "gate" | "web_dev";
+  status: "paid" | "unpaid";
   price: number;
   originalPrice: number;
   durationHours: number;
@@ -175,6 +177,8 @@ export async function updateCourseFromReview(
     await requireSuperAdmin();
 
     if (!input.title.trim()) return fail("Course title is required.");
+    const status = input.status === "unpaid" ? "unpaid" : "paid";
+    if (status === "unpaid") input.price = 0;
     if (input.price < 0 || input.originalPrice < 0) {
       return fail("Prices cannot be negative.");
     }
@@ -189,6 +193,7 @@ export async function updateCourseFromReview(
         category: input.category,
         level: input.level,
         program: input.program,
+        status,
         price: Math.round(input.price),
         originalPrice: Math.round(Math.max(input.originalPrice, input.price)),
         durationHours: Math.max(1, Math.round(input.durationHours)),
@@ -286,8 +291,9 @@ export async function updateLiveClassFromReview(
     if (!input.title.trim()) return fail("Class title is required.");
     if (!input.topic.trim()) return fail("Class topic is required.");
 
-    const startsAt = new Date(input.startsAt);
-    const endsAt = new Date(input.endsAt);
+    // Same IST contract as creation — see `istInputToDate`.
+    const startsAt = istInputToDate(input.startsAt);
+    const endsAt = istInputToDate(input.endsAt);
     if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) {
       return fail("Please provide valid start and end times.");
     }
