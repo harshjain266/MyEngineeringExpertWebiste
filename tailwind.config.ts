@@ -64,6 +64,11 @@ const config: Config = {
         "hero-grid":
           "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.16) 1px, transparent 0)",
       },
+      // `content-visibility: auto` lets the browser skip layout and paint for
+      // sections still below the fold, then do the work as they approach the
+      // viewport. `contain-intrinsic-size` reserves a placeholder height so the
+      // scrollbar does not jump. No JS, and the markup still server-renders,
+      // so nothing is lost for SEO.
       keyframes: {
         "fade-up": {
           "0%": { opacity: "0", transform: "translateY(16px)" },
@@ -79,12 +84,24 @@ const config: Config = {
         "spin-slow": {
           to: { transform: "rotate(360deg)" },
         },
+        // Master-class badge: replaces what GSAP used to tween.
+        "badge-pop": {
+          "0%": { opacity: "0", transform: "scale(0.8) translateY(6px)" },
+          "100%": { opacity: "1", transform: "scale(1) translateY(0)" },
+        },
+        "badge-shine": {
+          "0%": { transform: "translateX(-180%) skewX(-12deg)" },
+          "55%, 100%": { transform: "translateX(240%) skewX(-12deg)" },
+        },
       },
       animation: {
         "fade-up": "fade-up 0.6s cubic-bezier(0.22,1,0.36,1) both",
         float: "float 6s ease-in-out infinite",
         shimmer: "shimmer 1.6s infinite",
         "spin-slow": "spin-slow 18s linear infinite",
+        // `back.out(2)` equivalent: a slight overshoot on the way in.
+        "badge-pop": "badge-pop 0.55s cubic-bezier(0.34,1.56,0.64,1) both",
+        "badge-shine": "badge-shine 2.5s ease-in-out infinite",
       },
     },
   },

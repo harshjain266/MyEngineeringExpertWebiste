@@ -69,7 +69,8 @@ export function LiveClassCard({ item, isLive }: { item: any; isLive?: boolean })
           </div>
           <div className="flex items-center gap-3 text-sm text-ink-soft">
             <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-none">
-              <Image src={avatarImage(item.instructor.avatar, item.instructor.name)} alt={item.instructor.name} fill className="object-cover" />
+              <Image src={avatarImage(item.instructor.avatar, item.instructor.name)} alt={item.instructor.name} fill
+              sizes="32px" className="object-cover" />
             </div>
             <span>{item.instructor.name}</span>
           </div>

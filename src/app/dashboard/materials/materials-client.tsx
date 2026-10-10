@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import {
   BookOpen,
   CalendarRange,
+  Download,
+  FileText,
   FileStack,
   FolderOpen,
   Search,
@@ -14,8 +16,8 @@ import {
 } from "lucide-react";
 import { MaterialList } from "@/components/course/material-list";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import type { MaterialKind, StudyMaterial } from "@/types";
+import { cn, formatClassDays, formatClassWindow } from "@/lib/utils";
+import type { CourseSchedule, MaterialKind, StudyMaterial } from "@/types";
 
 interface CourseOption {
   id: string;
@@ -27,6 +29,8 @@ interface Props {
   materials: StudyMaterial[];
   courses: CourseOption[];
   initialCourseId: string;
+  /** Imported batch schedules — one per enrolled course that has one. */
+  schedules: CourseSchedule[];
 }
 
 /** Relative date windows, evaluated against `createdAt`. */
@@ -50,7 +54,12 @@ const controlCls =
   "h-11 w-full rounded-xl border border-surface-muted bg-white px-3 text-sm text-ink outline-none transition focus:border-brand-300 focus:ring-2 focus:ring-brand-500/10";
 const labelCls = "mb-1.5 block text-xs font-bold uppercase tracking-wider text-ink-muted";
 
-export function MaterialsClient({ materials, courses, initialCourseId }: Props) {
+export function MaterialsClient({
+  materials,
+  courses,
+  initialCourseId,
+  schedules,
+}: Props) {
   const [courseId, setCourseId] = useState(initialCourseId);
   const [range, setRange] = useState<string>("all");
   const [from, setFrom] = useState("");
@@ -91,6 +100,16 @@ export function MaterialsClient({ materials, courses, initialCourseId }: Props) 
       );
     });
   }, [materials, courseId, kind, range, from, to, query]);
+
+  // The schedule section follows the course filter, so picking one course
+  // narrows both the files and the schedule shown.
+  const visibleSchedules = useMemo(
+    () =>
+      courseId === "all"
+        ? schedules
+        : schedules.filter((s) => s.courseId === courseId),
+    [schedules, courseId],
+  );
 
   /** Group into date headings so a long list stays scannable. */
   const grouped = useMemo(() => {
@@ -169,6 +188,53 @@ export function MaterialsClient({ materials, courses, initialCourseId }: Props) 
           </div>
         </div>
       </section>
+
+      {/* ─── Classes Scheduled ─── */}
+      {visibleSchedules.length > 0 ? (
+        <section className="rounded-3xl border border-surface-muted bg-white p-5 shadow-soft">
+          <div className="mb-4 flex items-center gap-2">
+            <CalendarRange size={16} className="text-brand-600" />
+            <h2 className="font-display text-base font-bold text-ink">Classes Scheduled</h2>
+            <span className="ml-auto rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-semibold text-ink-muted">
+              {visibleSchedules.length}
+            </span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {visibleSchedules.map((sch) => (
+              <div
+                key={sch.courseId}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-100 bg-brand-50/50 p-4"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-brand-700 shadow-soft">
+                    <FileText size={19} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-ink">{sch.courseTitle}</p>
+                    <p className="truncate text-xs text-ink-muted">
+                      {formatClassDays(sch.classDays)} ·{" "}
+                      {formatClassWindow(sch.classStartTime, sch.classEndTime)}
+                    </p>
+                    {sch.fileName ? (
+                      <p className="mt-0.5 truncate text-[11px] text-ink-soft">{sch.fileName}</p>
+                    ) : null}
+                  </div>
+                </div>
+                <a
+                  href={sch.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="flex items-center gap-1.5 rounded-lg bg-ink px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  <Download size={14} /> Download
+                </a>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* Filters */}
       <section className="rounded-3xl border border-surface-muted bg-white p-5 shadow-soft">

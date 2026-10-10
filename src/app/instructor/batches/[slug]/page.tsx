@@ -5,7 +5,9 @@ import {
   ArrowLeft,
   CalendarDays,
   Clock,
+  Download,
   ExternalLink,
+  FileText,
   Radio,
   Users,
   Video,
@@ -16,7 +18,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StartClassButton } from "@/components/instructor/start-class-button";
 import { MeetingPasscode } from "@/components/ui/meeting-passcode";
-import { formatISTDate, formatISTTime } from "@/lib/utils";
+import {
+  formatClassDays,
+  formatClassWindow,
+  formatISTDate,
+  formatISTTime,
+} from "@/lib/utils";
 import { MaterialManager } from "@/components/course/material-manager";
 import { listCourseMaterials } from "@/lib/data";
 import { courseImage } from "@/lib/utils";
@@ -131,6 +138,35 @@ export default async function InstructorBatchDetailPage({ params }: Params) {
               <HeroStat label="Upcoming" value={upcoming.length} />
               <HeroStat label="Live" value={liveCount} />
             </div>
+
+            {/* The schedule document the admin imported for this batch. */}
+            {course.syllabusUrl ? (
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-200 bg-brand-50/60 px-4 py-3.5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-brand-700 shadow-soft">
+                    <FileText size={18} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-ink">
+                      {course.syllabusName || "Batch schedule"}
+                    </p>
+                    <p className="truncate text-xs text-ink-muted">
+                      {formatClassDays(course.classDays)} ·{" "}
+                      {formatClassWindow(course.classStartTime, course.classEndTime)}
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href={course.syllabusUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="flex items-center gap-1.5 rounded-lg bg-ink px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  <Download size={14} /> Download
+                </a>
+              </div>
+            ) : null}
           </div>
         </div>
       </section>

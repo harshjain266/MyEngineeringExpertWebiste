@@ -168,7 +168,8 @@ export default function AboutPage() {
               className="flex flex-col items-center gap-6 rounded-[2rem] border border-surface-muted bg-white p-8 text-center transition-all hover:shadow-xl md:flex-row md:text-left"
             >
               <div className="relative h-40 w-40 shrink-0 overflow-hidden rounded-2xl ring-4 ring-white shadow-lg">
-                <Image src={founder.avatar} alt={founder.name} fill className="object-cover" />
+                <Image src={founder.avatar} alt={founder.name} fill
+              sizes="(max-width: 768px) 100vw, 400px" className="object-cover" />
               </div>
               <div className="flex-1 space-y-4">
                 <Quote className="text-brand-200" size={32} />

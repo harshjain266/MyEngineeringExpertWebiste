@@ -336,6 +336,7 @@ export default async function InstructorDashboardPage() {
                     src={avatarImage(instructor?.avatar ?? user.avatar, user.name)}
                     alt={instructor?.name || user.name}
                     fill
+              sizes="64px"
                     className="object-cover"
                   />
                 ) : null}

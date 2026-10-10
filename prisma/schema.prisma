@@ -107,36 +107,50 @@ model Instructor {
 }
 
 model Course {
-  id            String          @id @default(uuid())
-  slug          String          @unique
-  title         String
-  category      String
-  level         Level           @default(Beginner)
-  price         Int
-  originalPrice Int
-  rating        Float           @default(0)
-  ratingCount   Int             @default(0)
-  durationHours Int             @default(0)
-  lectures      Int             @default(0)
-  language      String          @default("English")
-  thumbnail     String?
-  badge         String?
-  tags          String[]
-  createdAt     DateTime        @default(now())
-  startsOn      DateTime?
-  endsOn        DateTime?
-  instructorId  String
-  program       Program         @default(btech_bca)
-  plannerUrl    String?
-  popular       Boolean         @default(false)
-  disabled      Boolean         @default(false)
-  status        CourseStatus    @default(paid)
-  instructor    Instructor      @relation(fields: [instructorId], references: [id])
-  enrollments   Enrollment[]
-  lessons       Lesson[]
-  liveClasses   LiveClass[]
-  wishlist      Wishlist[]
-  materials     StudyMaterial[]
+  id             String          @id @default(uuid())
+  slug           String          @unique
+  title          String
+  category       String
+  level          Level           @default(Beginner)
+  price          Int
+  originalPrice  Int
+  rating         Float           @default(0)
+  ratingCount    Int             @default(0)
+  durationHours  Int             @default(0)
+  lectures       Int             @default(0)
+  language       String          @default("English")
+  thumbnail      String?
+  badge          String?
+  tags           String[]
+  createdAt      DateTime        @default(now())
+  startsOn       DateTime?
+  endsOn         DateTime?
+  /// Weekdays this batch runs, as 3-letter keys: ["Mon","Wed","Fri"].
+  /// Empty means the schedule has not been set yet.
+  classDays      String[]
+  /// Daily class window, stored as a bare "HH:mm" 24-hour wall clock in IST —
+  /// it is a recurring time of day, not an instant, so no timezone applies.
+  classStartTime String?
+  classEndTime   String?
+  /// Batch schedule / syllabus document. Only the URL lives in Postgres — the
+  /// file itself sits on Cloudinary, so the database stays small.
+  syllabusUrl    String?
+  /// Original filename, shown on the download button.
+  syllabusName   String?
+  /// How lectures are delivered, e.g. "Live Online", "Offline", "Hybrid".
+  modeOfLectures String?
+  instructorId   String
+  program        Program         @default(btech_bca)
+  plannerUrl     String?
+  popular        Boolean         @default(false)
+  disabled       Boolean         @default(false)
+  status         CourseStatus    @default(paid)
+  instructor     Instructor      @relation(fields: [instructorId], references: [id])
+  enrollments    Enrollment[]
+  lessons        Lesson[]
+  liveClasses    LiveClass[]
+  wishlist       Wishlist[]
+  materials      StudyMaterial[]
 
   approvalStatus ApprovalStatus @default(approved)
   reviewNote     String?

@@ -78,6 +78,7 @@ export default async function TeacherProfilePage({
               src={avatarImage(instructor.avatar, instructor.name)}
               alt={instructor.name}
               fill
+              sizes="128px"
               className="object-cover"
             />
           </div>
@@ -200,7 +201,8 @@ export default async function TeacherProfilePage({
                     <div className="flex items-center gap-4 rounded-3xl border border-surface-muted bg-white p-4 shadow-soft transition-colors group-hover:border-brand-300 group-hover:bg-brand-50/40">
                       <div className="relative w-16 h-16 rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
                         {course.thumbnail ? (
-                          <Image src={courseImage(course.thumbnail)} alt={course.title} fill className="object-cover" />
+                          <Image src={courseImage(course.thumbnail)} alt={course.title} fill
+              sizes="128px" className="object-cover" />
                         ) : (
                           <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold">
                             {course.title.charAt(0)}

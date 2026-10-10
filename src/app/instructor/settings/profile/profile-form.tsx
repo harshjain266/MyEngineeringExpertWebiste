@@ -54,6 +54,7 @@ export default function ProfileForm({
                 src={avatarUrl}
                 alt="Avatar"
                 fill
+              sizes="96px"
                 className="object-cover"
               />
             ) : (

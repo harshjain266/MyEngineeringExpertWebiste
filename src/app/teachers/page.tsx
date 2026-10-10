@@ -15,6 +15,7 @@ import { Footer } from "@/components/landing/footer";
 import { Badge } from "@/components/ui/badge";
 import { compactNumber, initials } from "@/lib/utils";
 import { avatarImage } from "@/lib/utils";
+import { toCardInstructor } from "@/lib/data";
 
 type _TeacherCourse = { id: string; title: string; disabled: boolean };
 type _TeacherInstructor = { id: string; name: string; avatar: string | null; title: string | null; bio: string | null; qualifications: string | null; experience: string | null; students: number; courses: _TeacherCourse[] };
@@ -30,7 +31,19 @@ export default async function TeachersPage() {
     where: {
       courses: { some: { disabled: false } },
     },
-    include: {
+    // Explicit select so the row shape stays visible. The avatar is the part
+    // that matters for weight: it leaves as a URL the browser can lazy-load and
+    // cache, rather than inline base64 parsed on every page load.
+    select: {
+      id: true,
+      name: true,
+      title: true,
+      avatar: true,
+      rating: true,
+      students: true,
+      bio: true,
+      qualifications: true,
+      experience: true,
       courses: {
         select: { id: true, slug: true, title: true, disabled: true },
         where: { disabled: false },
@@ -40,6 +53,9 @@ export default async function TeachersPage() {
     },
     orderBy: [{ rating: "desc" }, { students: "desc" }],
   });
+
+  // Inline base64 avatars become cacheable URLs before they reach the client.
+  const teachers = instructors.map((i) => ({ ...i, ...toCardInstructor(i) }));
 
   return (
     <main className="min-h-screen bg-surface-subtle">
@@ -66,7 +82,7 @@ export default async function TeachersPage() {
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-ink-muted">Available Faculty</p>
-                  <p className="font-display text-3xl font-bold text-ink">{instructors.length}</p>
+                  <p className="font-display text-3xl font-bold text-ink">{teachers.length}</p>
                 </div>
               </div>
               <p className="mt-4 text-sm leading-6 text-ink-muted">
@@ -79,7 +95,7 @@ export default async function TeachersPage() {
       </section>
 
       <section className="container-px py-12">
-        {instructors.length === 0 ? (
+        {teachers.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-surface-muted bg-white py-20 text-center">
             <div className="grid h-16 w-16 place-items-center rounded-full bg-surface-subtle text-ink-muted">
               <Search size={30} />
@@ -91,7 +107,7 @@ export default async function TeachersPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {instructors.map((instructor: _TeacherInstructor) => {
+            {teachers.map((instructor: _TeacherInstructor) => {
               const profileComplete = Boolean(
                 instructor.bio && instructor.qualifications && instructor.experience,
               );
