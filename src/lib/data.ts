@@ -8,7 +8,7 @@ import { PROGRAMS, PROGRAM_BY_SLUG } from "@/config/programs";
 import type { 
   Course, EnrolledCourse, LiveClass, LearningStats, Program, Announcement,
   AdminUser, AdminInstructor, AdminCourse, AdminAccount, AdminLiveClass, User,
-  PendingCourse, PendingLiveClass, PendingBlog, StudyMaterial, AppNotification,
+  PendingCourse, PendingLiveClass, PendingBlog, StudyMaterial, AppNotification, CourseSchedule,
   InstructorMasterClass
 } from "@/types";
 
@@ -62,8 +62,14 @@ function toLiveClass(lc: {
   courseId: string | null;
   [key: string]: unknown;
 }): LiveClass {
+  const instructor = lc.instructor as
+    | { id: string; name: string; title: string; avatar: string | null }
+    | undefined;
+
   return {
     ...lc,
+    // Keeps base64 avatars out of every live-class payload.
+    ...(instructor ? { instructor: toCardInstructor(instructor) } : {}),
     startsAt: lc.startsAt.toISOString(),
     endsAt: lc.endsAt.toISOString(),
     // A class with no course is open to every student — that is a master class.
@@ -88,7 +94,7 @@ export async function getDashboardData() {
         include: {
           course: {
             include: { 
-              instructor: true,
+              instructor: { select: INSTRUCTOR_CARD_SELECT },
               _count: {
                 select: { enrollments: true }
               }
@@ -122,10 +128,12 @@ export async function getDashboardData() {
   }
 
   // Map enrollments to EnrolledCourse type
-  const enrolled: EnrolledCourse[] = dbUser.enrollments.map((e: { progress: number; lastAccessed: Date; course: { id: string; slug: string; title: string; category: string; level: string; price: number; originalPrice: number; rating: number; ratingCount: number; durationHours: number; lectures: number; language: string; thumbnail: string | null; badge: string | null; tags: string[]; program: string; plannerUrl: string | null; popular: boolean; instructor: { id: string; name: string; title: string | null; avatar: string | null; bio: string | null }; _count: { enrollments: number } } }) => ({
+  // The row shape is inferred from the query above — spelling it out by hand
+  // only drifts, as it did when the instructor select was slimmed down.
+  const enrolled: EnrolledCourse[] = dbUser.enrollments.map((e) => ({
     course: {
       ...e.course,
-      instructor: e.course.instructor,
+      instructor: toCardInstructor(e.course.instructor),
       enrollmentCount: (e.course as any)._count?.enrollments || 0,
     } as unknown as Course,
     progress: e.progress,
@@ -155,7 +163,7 @@ export async function getDashboardData() {
     // Free for everyone, no course attached.
     prisma.liveClass.findMany({
       where: { ...liveClassWindow(), courseId: null },
-      include: { instructor: true },
+      include: { instructor: { select: INSTRUCTOR_CARD_SELECT } },
       orderBy: { startsAt: 'asc' },
       take: 7
     }),
@@ -164,7 +172,10 @@ export async function getDashboardData() {
       ? Promise.resolve([])
       : prisma.liveClass.findMany({
           where: { ...liveClassWindow(), courseId: { in: enrolledIds } },
-          include: { instructor: true, course: { select: { title: true, slug: true } } },
+          include: {
+        instructor: { select: INSTRUCTOR_CARD_SELECT },
+        course: { select: { title: true, slug: true } },
+      },
           orderBy: { startsAt: 'asc' },
           take: 7
         }),
@@ -175,7 +186,7 @@ export async function getDashboardData() {
         popular: true,
       },
       include: { 
-        instructor: true,
+        instructor: { select: INSTRUCTOR_CARD_SELECT },
         _count: {
           select: { enrollments: true }
         }
@@ -228,6 +239,46 @@ export async function getUserOrders() {
   }));
 }
 
+/* ─── Payload hygiene ───────────────────────────────────────────
+ *
+ * `include: { instructor: true }` pulls the whole instructor row — bio,
+ * qualifications, experience and, worst of all, a base64 `data:` avatar that
+ * can run to 68 KB. On a list of courses those avatars dominate the response:
+ * the landing page was shipping 614 KB of JSON, 585 KB of it images, to render
+ * eight cards that need 4 KB.
+ *
+ * `INSTRUCTOR_CARD_SELECT` fetches only what a card draws, and `toCardInstructor`
+ * swaps an inline avatar for a URL the browser can lazy-load and cache.
+ */
+
+export const INSTRUCTOR_CARD_SELECT = {
+  id: true,
+  name: true,
+  title: true,
+  avatar: true,
+  rating: true,
+  students: true,
+} as const;
+
+type CardInstructorRow = {
+  id: string;
+  name: string;
+  title: string;
+  avatar: string | null;
+  rating?: number;
+  students?: number;
+};
+
+/** Replace an inline data-URL avatar with a cacheable route URL. */
+export function toCardInstructor<T extends CardInstructorRow>(instructor: T) {
+  return {
+    ...instructor,
+    avatar: instructor.avatar?.startsWith("data:")
+      ? `/api/media/instructor/${instructor.id}`
+      : instructor.avatar,
+  };
+}
+
 export async function getCourses(): Promise<Course[]> {
   const user = await getCurrentUser();
   const enrolledCourseIds = new Set<string>();
@@ -243,17 +294,18 @@ export async function getCourses(): Promise<Course[]> {
   const dbCourses = await prisma.course.findMany({
     where: PUBLIC_COURSE_FILTER,
     include: {
-      instructor: true,
+      instructor: { select: INSTRUCTOR_CARD_SELECT },
       _count: {
         select: { enrollments: true }
       }
     }
   });
 
-  return dbCourses.map((c: Record<string, unknown>) => ({
+  return dbCourses.map((c) => ({
     ...c,
-    enrollmentCount: (c as any)._count?.enrollments || 0,
-    isEnrolled: enrolledCourseIds.has((c as any).id),
+    instructor: toCardInstructor(c.instructor),
+    enrollmentCount: c._count?.enrollments || 0,
+    isEnrolled: enrolledCourseIds.has(c.id),
   })) as unknown as Course[];
 }
 
@@ -271,7 +323,7 @@ export async function getCoursesByProgram(programSlug: string): Promise<Course[]
   const dbCourses = await prisma.course.findMany({
     where: { ...PUBLIC_COURSE_FILTER, program: programSlug as DbProgram },
     include: { 
-      instructor: true,
+      instructor: { select: INSTRUCTOR_CARD_SELECT },
       _count: {
         select: { enrollments: true }
       }
@@ -311,6 +363,9 @@ export async function getCourseBySlug(
 
   return {
     ...course,
+    // Full instructor record here (the detail page shows bio and
+    // qualifications), but the avatar still goes out as a URL.
+    instructor: toCardInstructor(course.instructor),
     enrollmentCount: (course as any)._count?.enrollments || 0
   } as unknown as Course;
 }
@@ -349,7 +404,7 @@ export async function getLiveClassesByCourse(courseId: string): Promise<LiveClas
 
   const dbLiveClasses = await prisma.liveClass.findMany({
     where: { ...liveClassWindow(), courseId },
-    include: { instructor: true },
+    include: { instructor: { select: INSTRUCTOR_CARD_SELECT } },
     orderBy: { startsAt: "asc" },
     take: 20,
   });
@@ -365,7 +420,7 @@ export async function getLiveClassesByCourse(courseId: string): Promise<LiveClas
 export async function getAllLiveClasses(days = 7): Promise<LiveClass[]> {
   const dbLiveClasses = await prisma.liveClass.findMany({
     where: { ...liveClassWindow(days), courseId: null },
-    include: { instructor: true },
+    include: { instructor: { select: INSTRUCTOR_CARD_SELECT } },
     orderBy: { startsAt: "asc" },
     take: 20,
   });
@@ -389,7 +444,10 @@ export async function getMyBatchLiveClasses(days = 7): Promise<LiveClass[]> {
       ...liveClassWindow(days),
       courseId: { in: enrollments.map((e) => e.courseId) },
     },
-    include: { instructor: true, course: { select: { title: true, slug: true } } },
+    include: {
+        instructor: { select: INSTRUCTOR_CARD_SELECT },
+        course: { select: { title: true, slug: true } },
+      },
     orderBy: { startsAt: "asc" },
     take: 20,
   });
@@ -769,18 +827,51 @@ export async function getCourseMaterialsForStudent(
 export async function getMyStudyMaterials(): Promise<{
   materials: StudyMaterial[];
   courses: { id: string; title: string; slug: string }[];
+  schedules: CourseSchedule[];
 }> {
   const user = await getCurrentUser();
   if (!user) throw new Error("Unauthorized");
 
   const enrollments = await prisma.enrollment.findMany({
     where: { userId: user.id },
-    select: { course: { select: { id: true, title: true, slug: true } } },
+    select: {
+      course: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          syllabusUrl: true,
+          syllabusName: true,
+          classDays: true,
+          classStartTime: true,
+          classEndTime: true,
+        },
+      },
+    },
     orderBy: { lastAccessed: "desc" },
   });
 
-  const courses = enrollments.map((e) => e.course);
-  if (courses.length === 0) return { materials: [], courses: [] };
+  // The imported schedule document for each enrolled batch, surfaced as its own
+  // "Classes Scheduled" section rather than mixed in with teacher uploads.
+  const schedules: CourseSchedule[] = enrollments
+    .filter((e) => !!e.course.syllabusUrl)
+    .map((e) => ({
+      courseId: e.course.id,
+      courseTitle: e.course.title,
+      courseSlug: e.course.slug,
+      url: e.course.syllabusUrl!,
+      fileName: e.course.syllabusName,
+      classDays: e.course.classDays,
+      classStartTime: e.course.classStartTime,
+      classEndTime: e.course.classEndTime,
+    }));
+
+  const courses = enrollments.map((e) => ({
+    id: e.course.id,
+    title: e.course.title,
+    slug: e.course.slug,
+  }));
+  if (courses.length === 0) return { materials: [], courses: [], schedules };
 
   const materials = await prisma.studyMaterial.findMany({
     where: { courseId: { in: courses.map((c) => c.id) } },
@@ -793,6 +884,7 @@ export async function getMyStudyMaterials(): Promise<{
 
   return {
     courses,
+    schedules,
     materials: materials.map((m) => ({
       id: m.id,
       courseId: m.courseId,

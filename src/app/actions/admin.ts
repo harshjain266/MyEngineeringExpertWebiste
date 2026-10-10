@@ -6,7 +6,7 @@ import { isSuperAdmin } from "@/lib/roles";
 import { prisma } from "@/lib/db";
 import { notifyCourseSubmitted, notifyLiveClassSubmitted } from "@/lib/notify";
 import { announceLiveClass, announceSubmission } from "@/lib/notifications";
-import { istInputToDate } from "@/lib/utils";
+import { istInputToDate, sortClassDays } from "@/lib/utils";
 
 type Level = "Beginner" | "Intermediate" | "Advanced";
 type Program = "btech_bca" | "dsa" | "aptitude" | "gate" | "web_dev";
@@ -53,6 +53,15 @@ export interface CreateCourseInput {
   program: Program;
   startsOn?: string;
   endsOn?: string;
+  /** Weekdays the batch runs, e.g. ["Mon","Wed","Fri"]. */
+  classDays?: string[];
+  /** Daily window as bare "HH:mm" IST wall clocks. */
+  classStartTime?: string;
+  classEndTime?: string;
+  modeOfLectures?: string;
+  /** https link to the schedule/syllabus document (Cloudinary). */
+  syllabusUrl?: string;
+  syllabusName?: string;
   thumbnail?: string;
   badge?: string;
   instructorId: string;
@@ -66,6 +75,14 @@ export async function createCourse(input: CreateCourseInput) {
     }
 
     await assertCanManageInstructor(input.instructorId);
+
+    const syllabusUrl = input.syllabusUrl?.trim();
+    if (syllabusUrl && !/^https:\/\//i.test(syllabusUrl)) {
+      return {
+        success: false,
+        error: "The schedule link must be an https URL (upload it, or paste a Cloudinary link).",
+      };
+    }
 
     if (!input.title || !input.title.trim()) {
       return { success: false, error: "Course title is required." };
@@ -99,6 +116,12 @@ export async function createCourse(input: CreateCourseInput) {
         program: input.program,
         startsOn: input.startsOn ? new Date(input.startsOn) : null,
         endsOn: input.endsOn ? new Date(input.endsOn) : null,
+        classDays: sortClassDays(input.classDays ?? []),
+        classStartTime: input.classStartTime?.trim() || null,
+        classEndTime: input.classEndTime?.trim() || null,
+        modeOfLectures: input.modeOfLectures?.trim() || null,
+        syllabusUrl: input.syllabusUrl?.trim() || null,
+        syllabusName: input.syllabusName?.trim() || null,
         thumbnail: input.thumbnail || null,
         badge: input.badge || null,
         disabled: false,

@@ -49,6 +49,17 @@ export interface Course {
   status?: CourseStatus;
   enrollmentCount?: number;
   isEnrolled?: boolean;
+  startsOn?: string | Date | null;
+  endsOn?: string | Date | null;
+  /** Weekdays the batch runs, e.g. ["Mon","Wed","Fri"]. */
+  classDays?: string[];
+  /** Daily window as bare "HH:mm" IST wall clocks. */
+  classStartTime?: string | null;
+  classEndTime?: string | null;
+  modeOfLectures?: string | null;
+  /** https link to the batch schedule document (stored on Cloudinary). */
+  syllabusUrl?: string | null;
+  syllabusName?: string | null;
 }
 
 export interface EnrolledCourse {
@@ -143,8 +154,9 @@ export interface CourseDetail {
   features: string[];
   about: {
     duration: string[];
-    validity: string;
     mode: string;
+    /** Weekdays the batch runs — replaced the old hardcoded "Validity" row. */
+    classDays: string;
     schedule: string;
     subjects: string;
     extras: string[];
@@ -383,4 +395,19 @@ export interface InstructorMasterClass {
   status: "Upcoming" | "Live" | "Ongoing" | "Completed";
   approvalStatus: ApprovalStatus;
   reviewNote?: string | null;
+}
+
+/**
+ * The schedule document attached to a batch, as a student or teacher sees it.
+ * The file lives on Cloudinary; only this pointer is stored.
+ */
+export interface CourseSchedule {
+  courseId: string;
+  courseTitle: string;
+  courseSlug: string;
+  url: string;
+  fileName?: string | null;
+  classDays?: string[];
+  classStartTime?: string | null;
+  classEndTime?: string | null;
 }

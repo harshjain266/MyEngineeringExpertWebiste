@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/roles";
+import { isCloudinaryConfigured, uploadToCloudinary } from "@/lib/cloudinary";
 
 /**
  * Small-file upload endpoint.
@@ -94,6 +95,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Preferred path: the bytes go to Cloudinary and Postgres stores only the
+    // URL. The data-URL branch below is the pre-Cloudinary fallback — correct,
+    // but it puts the whole file in the database, so keep the size caps tight.
+    if (isCloudinaryConfigured()) {
+      const uploaded = await uploadToCloudinary(file, {
+        folder:
+          kind === "avatar"
+            ? "engineering-expert/avatars"
+            : kind === "material"
+              ? "engineering-expert/materials"
+              : "engineering-expert/images",
+      });
+
+      return NextResponse.json({
+        url: uploaded.url,
+        fileName: file.name,
+        fileSize: uploaded.bytes || file.size,
+        mimeType: file.type,
+        storage: "cloudinary",
+      });
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
     const dataUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
 
@@ -102,6 +125,7 @@ export async function POST(request: NextRequest) {
       fileName: file.name,
       fileSize: file.size,
       mimeType: file.type,
+      storage: "inline",
     });
   } catch (error) {
     console.error("Upload error:", error);

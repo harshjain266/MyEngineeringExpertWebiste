@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,10 +12,21 @@ import {
   Sparkles,
   UserRound,
   Video,
+  CalendarRange,
+  FileText,
+  Upload,
+  X,
 } from "lucide-react";
 import { createCourse } from "@/app/actions/admin";
 import { PROGRAMS } from "@/config/programs";
-import { cn, formatINR, formatISTDate } from "@/lib/utils";
+import {
+  CLASS_DAYS,
+  CLASS_DAY_INITIALS,
+  cn,
+  formatClassDays,
+  formatINR,
+  formatISTDate,
+} from "@/lib/utils";
 import type { AdminCourse } from "@/types";
 
 interface InstructorOption {
@@ -43,6 +54,27 @@ const inputCls =
   "h-11 w-full rounded-xl border border-surface-muted bg-white px-3 text-sm text-ink placeholder-ink-muted outline-none transition focus:border-brand-300 focus:ring-2 focus:ring-brand-500/10";
 const labelCls = "mb-1.5 block text-xs font-bold uppercase tracking-wider text-ink-muted";
 
+/**
+ * A label for a pasted schedule link.
+ *
+ * The last URL segment is only a usable name when it actually looks like a
+ * file. Cloudinary share links end in an opaque id — taking the last segment
+ * blindly produced names like "e704ddfb189790c5603fec97633eb2bc".
+ */
+function scheduleNameFor(url: string, courseTitle: string): string {
+  const fallback = courseTitle.trim()
+    ? `${courseTitle.trim()} — Class Schedule`
+    : "Class Schedule";
+  try {
+    const last = decodeURIComponent(new URL(url).pathname.split("/").filter(Boolean).pop() ?? "");
+    // Needs a real extension, and a name that is not just a hex blob.
+    const named = /\.[a-z0-9]{2,5}$/i.test(last) && !/^[0-9a-f]{16,}\./i.test(last);
+    return named ? last : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export function AdminCoursesClient({ instructors, courses }: Props) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -63,9 +95,47 @@ export function AdminCoursesClient({ instructors, courses }: Props) {
     language: "English",
     startsOn: "",
     endsOn: "",
+    classStartTime: "",
+    classEndTime: "",
+    modeOfLectures: "Live Online",
     thumbnail: "",
     badge: "",
   });
+  const [classDays, setClassDays] = useState<string[]>([]);
+  const [syllabus, setSyllabus] = useState<{ url: string; name: string } | null>(null);
+  const [syllabusUploading, setSyllabusUploading] = useState(false);
+  const [syllabusError, setSyllabusError] = useState("");
+  const syllabusFileRef = useRef<HTMLInputElement>(null);
+
+  const handleSyllabusUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setSyllabusError("");
+    setSyllabusUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("kind", "material");
+      const res = await fetch("/api/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) {
+        setSyllabusError(data.error ?? "Could not upload that file.");
+        return;
+      }
+      setSyllabus({ url: data.url, name: data.fileName ?? file.name });
+    } catch {
+      setSyllabusError("Could not upload that file. Please try again.");
+    } finally {
+      setSyllabusUploading(false);
+    }
+  };
+
+  const toggleDay = (day: string) =>
+    setClassDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
+    );
 
   const set = (key: keyof typeof form) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -97,6 +167,12 @@ export function AdminCoursesClient({ instructors, courses }: Props) {
       language: form.language,
       startsOn: form.startsOn || undefined,
       endsOn: form.endsOn || undefined,
+      classDays,
+      classStartTime: form.classStartTime || undefined,
+      classEndTime: form.classEndTime || undefined,
+      modeOfLectures: form.modeOfLectures || undefined,
+      syllabusUrl: syllabus?.url || undefined,
+      syllabusName: syllabus?.name || undefined,
       thumbnail: form.thumbnail || undefined,
       badge: form.badge || undefined,
     });
@@ -118,9 +194,14 @@ export function AdminCoursesClient({ instructors, courses }: Props) {
       originalPrice: "",
       startsOn: "",
       endsOn: "",
+      classStartTime: "",
+      classEndTime: "",
       thumbnail: "",
       badge: "",
     }));
+    setClassDays([]);
+    setSyllabus(null);
+    setSyllabusError("");
     router.refresh();
   };
 
@@ -233,14 +314,181 @@ export function AdminCoursesClient({ instructors, courses }: Props) {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>Starts On</label>
-                <input type="date" value={form.startsOn} onChange={set("startsOn")} className={inputCls} />
+            {/* ─── Batch schedule — drives the "About the Batch" panel ─── */}
+            <div className="space-y-4 rounded-2xl border border-surface-muted bg-surface-subtle/60 p-4">
+              <div className="flex items-center gap-2">
+                <CalendarRange size={16} className="text-brand-600" />
+                <h3 className="text-sm font-bold text-ink">Batch Schedule</h3>
+                <span className="ml-auto text-[11px] font-semibold text-ink-muted">
+                  Shown to students on the course page
+                </span>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Course Start</label>
+                  <input
+                    type="date"
+                    value={form.startsOn}
+                    onChange={set("startsOn")}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Course End</label>
+                  <input
+                    type="date"
+                    value={form.endsOn}
+                    onChange={set("endsOn")}
+                    min={form.startsOn || undefined}
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className={labelCls}>Ends On</label>
-                <input type="date" value={form.endsOn} onChange={set("endsOn")} className={inputCls} />
+                <label className={labelCls}>Class Days</label>
+                <div className="flex flex-wrap gap-2">
+                  {CLASS_DAYS.map((day) => {
+                    const active = classDays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => toggleDay(day)}
+                        aria-pressed={active}
+                        title={day}
+                        className={cn(
+                          "grid h-10 w-10 place-items-center rounded-full text-sm font-bold transition-colors",
+                          active
+                            ? "bg-brand-600 text-white shadow-soft"
+                            : "bg-white text-ink-muted ring-1 ring-surface-muted hover:bg-brand-50 hover:text-brand-700",
+                        )}
+                      >
+                        {CLASS_DAY_INITIALS[day]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1.5 text-xs text-ink-muted">
+                  {classDays.length === 0
+                    ? "Pick the weekdays this batch runs on."
+                    : formatClassDays(classDays)}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Class Start Time (IST)</label>
+                  <input
+                    type="time"
+                    value={form.classStartTime}
+                    onChange={set("classStartTime")}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Class End Time (IST)</label>
+                  <input
+                    type="time"
+                    value={form.classEndTime}
+                    onChange={set("classEndTime")}
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={labelCls}>Mode of Lectures</label>
+                <select
+                  value={form.modeOfLectures}
+                  onChange={set("modeOfLectures")}
+                  className={inputCls}
+                >
+                  <option value="Live Online">Live Online</option>
+                  <option value="Offline">Offline</option>
+                  <option value="Hybrid">Hybrid (Online + Offline)</option>
+                  <option value="Recorded">Recorded</option>
+                </select>
+              </div>
+
+              {/* ─── Import schedule ─── */}
+              <div>
+                <label className={labelCls}>Import Schedule / Syllabus</label>
+                {syllabus ? (
+                  <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+                    <FileText size={16} className="shrink-0 text-emerald-700" />
+                    <a
+                      href={syllabus.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="min-w-0 flex-1 truncate text-sm font-semibold text-emerald-800 underline-offset-2 hover:underline"
+                    >
+                      {syllabus.name}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => setSyllabus(null)}
+                      className="shrink-0 rounded-lg p-1 text-emerald-700 transition-colors hover:bg-emerald-100"
+                      aria-label="Remove schedule"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <input
+                      ref={syllabusFileRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,image/*"
+                      onChange={handleSyllabusUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => syllabusFileRef.current?.click()}
+                      disabled={syllabusUploading}
+                      className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-surface-muted bg-white text-sm font-semibold text-ink-soft transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-60"
+                    >
+                      {syllabusUploading ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" /> Uploading…
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={16} /> Upload schedule (PDF, Word, Excel…)
+                        </>
+                      )}
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <span className="h-px flex-1 bg-surface-muted" />
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                        or paste a link
+                      </span>
+                      <span className="h-px flex-1 bg-surface-muted" />
+                    </div>
+                    <input
+                      type="url"
+                      placeholder="https://res.cloudinary.com/…/schedule.pdf"
+                      onChange={(e) => {
+                        const url = e.target.value.trim();
+                        setSyllabusError("");
+                        if (!url) return;
+                        if (!/^https:\/\//i.test(url)) return;
+                        setSyllabus({ url, name: scheduleNameFor(url, form.title) });
+                      }}
+                      className={inputCls}
+                    />
+                  </div>
+                )}
+                {syllabusError && (
+                  <p className="mt-1.5 text-xs font-semibold text-rose-600">{syllabusError}</p>
+                )}
+                <p className="mt-1.5 text-xs text-ink-muted">
+                  Students see this in the course Schedule tab, and enrolled students also get it
+                  under Study Material → Classes Scheduled. The assigned teacher gets it in their
+                  batch.
+                </p>
               </div>
             </div>
 

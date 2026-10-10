@@ -1,5 +1,10 @@
 import type { Course, CourseDetail } from "@/types";
-import { avatarImage } from "@/lib/utils";
+import {
+  avatarImage,
+  formatClassDays,
+  formatClassWindow,
+  formatISTDate,
+} from "@/lib/utils";
 
 /**
  * Derives PW-style course-detail content (plans, schedule, teachers, tabs …)
@@ -9,15 +14,23 @@ import { avatarImage } from "@/lib/utils";
 
 const roundTo = (n: number, step = 100) => Math.round(n / step) * step;
 
-const fmtDate = (d: Date) =>
-  d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const fmtDate = (d: Date) => formatISTDate(d, { weekday: undefined, day: "numeric" });
+
+/** The real batch dates, or null when an admin has not set them yet. */
+function batchDates(course: Course) {
+  const toDate = (v: Course["startsOn"]) => {
+    if (!v) return null;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+  return { start: toDate(course.startsOn), end: toDate(course.endsOn) };
+}
 
 export function buildCourseDetail(course: Course): CourseDetail {
-  const now = new Date();
-  const start = new Date(now);
-  start.setDate(start.getDate() + 20);
-  const end = new Date(start);
-  end.setFullYear(end.getFullYear() + 1);
+  // Batch dates come from the course record. They used to be invented here
+  // (today + 20 days, + 1 year), which is why every batch showed the same
+  // fabricated window no matter what the admin had entered.
+  const { start, end } = batchDates(course);
 
   // Subjects from tags, falling back to the category.
   const subjects =
@@ -79,10 +92,13 @@ export function buildCourseDetail(course: Course): CourseDetail {
     plannerUrl: course.plannerUrl,
   }));
 
+  const startLabel = start ? fmtDate(start) : "To be announced";
+  const endLabel = end ? fmtDate(end) : "To be announced";
+
   return {
     audience: `For ${course.level} learners`,
-    startsOn: fmtDate(start),
-    endsOn: fmtDate(end),
+    startsOn: startLabel,
+    endsOn: endLabel,
     plans,
     features: [
       "Live Lectures by expert faculty",
@@ -94,12 +110,15 @@ export function buildCourseDetail(course: Course): CourseDetail {
     ],
     about: {
       duration: [
-        `Course Start: ${fmtDate(start)}`,
-        `Course End: ${fmtDate(end)}`,
+        `Course Start: ${startLabel}`,
+        `Course End: ${endLabel}`,
       ],
-      validity: `Validity: ${end.getFullYear()} exams.`,
-      mode: "Mode of Lectures: Live Online",
-      schedule: "Schedule: 2 classes/day, 5 days/week",
+      mode: `Mode of Lectures: ${course.modeOfLectures?.trim() || "Live Online"}`,
+      classDays: `Class Days: ${formatClassDays(course.classDays)}`,
+      schedule: `Scheduled Time: ${formatClassWindow(
+        course.classStartTime,
+        course.classEndTime,
+      )}`,
       subjects: `Subjects: ${subjects}`,
       extras: [
         "Exam guidance & mentorship support",
@@ -121,7 +140,9 @@ export function buildCourseDetail(course: Course): CourseDetail {
       "Scheduled tests & AITS held according to the planner.",
       "Revision classes provided after syllabus completion.",
       "24×7 doubt resolution powered by the Ask-AI feature.",
-      `The complete course is accessible until the ${end.getFullYear()} exams.`,
+      ...(end
+        ? [`The complete course is accessible until ${fmtDate(end)}.`]
+        : []),
     ],
   };
 }

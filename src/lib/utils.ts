@@ -201,3 +201,66 @@ export function isISTToday(input: Date | string): boolean {
     d.toLocaleDateString("en-CA", { timeZone: IST_TIME_ZONE });
   return key(new Date(input)) === key(new Date());
 }
+
+/* ─── Class schedule days ───────────────────────────────────── */
+
+/** Stored keys for the weekdays a batch runs on. Order matters for display. */
+export const CLASS_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+export type ClassDay = (typeof CLASS_DAYS)[number];
+
+/** Single letter for the day pills in the admin form. */
+export const CLASS_DAY_INITIALS: Record<ClassDay, string> = {
+  Mon: "M",
+  Tue: "T",
+  Wed: "W",
+  Thu: "T",
+  Fri: "F",
+  Sat: "S",
+  Sun: "S",
+};
+
+/** Keep stored days in calendar order however they were clicked. */
+export function sortClassDays(days: readonly string[]): ClassDay[] {
+  return CLASS_DAYS.filter((d) => days.includes(d));
+}
+
+/**
+ * "Mon, Wed & Fri" — or a shorthand when the set is a familiar one, since
+ * "Every day" reads better than listing all seven.
+ */
+export function formatClassDays(days?: readonly string[] | null): string {
+  const ordered = sortClassDays(days ?? []);
+  if (ordered.length === 0) return "Schedule to be announced";
+  if (ordered.length === 7) return "Every day";
+  if (ordered.length === 6 && !ordered.includes("Sun")) return "Mon to Sat";
+  if (ordered.length === 5 && !ordered.includes("Sat") && !ordered.includes("Sun")) {
+    return "Mon to Fri";
+  }
+  if (ordered.length === 1) return ordered[0];
+  return `${ordered.slice(0, -1).join(", ")} & ${ordered[ordered.length - 1]}`;
+}
+
+/** "05:00 pm" from a stored "17:00" wall clock. Returns "" for empty input. */
+export function formatClockTime(value?: string | null): string {
+  if (!value) return "";
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return value;
+  const hours = Number(match[1]);
+  const minutes = match[2];
+  if (hours < 0 || hours > 23) return value;
+  const suffix = hours < 12 ? "am" : "pm";
+  const display = hours % 12 === 0 ? 12 : hours % 12;
+  return `${String(display).padStart(2, "0")}:${minutes} ${suffix}`;
+}
+
+/** "05:00 pm – 07:00 pm IST", or a single time, or a placeholder. */
+export function formatClassWindow(
+  start?: string | null,
+  end?: string | null,
+): string {
+  const from = formatClockTime(start);
+  const to = formatClockTime(end);
+  if (from && to) return `${from} – ${to} IST`;
+  if (from) return `${from} IST onwards`;
+  return "Timing to be announced";
+}

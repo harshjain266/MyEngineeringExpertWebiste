@@ -11,7 +11,7 @@ export default async function StudyMaterialPage({
 }: {
   searchParams: Promise<{ course?: string }>;
 }) {
-  const [{ course }, { materials, courses }] = await Promise.all([
+  const [{ course }, { materials, courses, schedules }] = await Promise.all([
     searchParams,
     getMyStudyMaterials(),
   ]);
@@ -24,6 +24,7 @@ export default async function StudyMaterialPage({
       materials={materials}
       courses={courses}
       initialCourseId={initialCourseId}
+      schedules={schedules}
     />
   );
 }

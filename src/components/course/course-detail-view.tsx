@@ -7,12 +7,13 @@ import { motion } from "framer-motion";
 import {
   BookOpen,
   CalendarDays,
+  CalendarRange,
   Check,
   Clock,
   Download,
+  FileText,
   Gift,
   Laptop,
-  Shield,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -21,8 +22,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BuyNowButton } from "@/components/course/buy-now-button";
 import { EnrollFreeButton } from "@/components/course/enroll-free-button";
-import { avatarImage, courseImage, formatINR } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import {
+  avatarImage,
+  cn,
+  courseImage,
+  formatClassDays,
+  formatClassWindow,
+  formatINR,
+} from "@/lib/utils";
 
 const TABS = [
   { id: "features", label: "Features" },
@@ -172,7 +179,7 @@ export function CourseDetailView({
             <AboutPanel detail={detail} />
           </section>
           <section id="schedule" className="scroll-mt-32">
-            <SchedulePanel detail={detail} />
+            <SchedulePanel course={course} />
           </section>
           <section id="teachers" className="scroll-mt-32">
             <TeachersPanel course={course} detail={detail} />
@@ -426,17 +433,17 @@ function parseKV(raw: string): { label: string; value: string } {
 const ABOUT_ICONS: Record<string, React.ElementType> = {
   "Course Start": CalendarDays,
   "Course End": CalendarDays,
-  Validity: Shield,
   "Mode of Lectures": Laptop,
-  Schedule: Clock,
+  "Class Days": CalendarRange,
+  "Scheduled Time": Clock,
   Subjects: BookOpen,
 };
 
 function AboutPanel({ detail }: { detail: CourseDetail }) {
   const kvRows = [
     ...detail.about.duration,
-    detail.about.validity,
     detail.about.mode,
+    detail.about.classDays,
     detail.about.schedule,
     detail.about.subjects,
   ].map(parseKV);
@@ -486,45 +493,43 @@ function AboutPanel({ detail }: { detail: CourseDetail }) {
   );
 }
 
-function SchedulePanel({ detail }: { detail: CourseDetail }) {
-  const tones = ["bg-sky-50 border-sky-400", "bg-violet-50 border-violet-400", "bg-amber-50 border-amber-400"];
+function SchedulePanel({ course }: { course: Course }) {
+  if (!course.syllabusUrl) {
+    return (
+      <Card title="Classes Schedule">
+        <p className="py-6 text-center text-sm text-ink-muted">
+          The class schedule for this batch has not been published yet.
+        </p>
+      </Card>
+    );
+  }
+
   return (
-    <Card title="Batch Schedules">
-      <div className="space-y-3">
-        {detail.schedule.map((s, i) => (
-          <div
-            key={i}
-            className={cn(
-              "flex items-center justify-between gap-3 rounded-xl border-l-4 px-4 py-3.5",
-              tones[i % tones.length],
-            )}
-          >
-            <div>
-              <div className="font-semibold text-ink">{s.subject}</div>
-              <div className="text-xs text-ink-muted">
-                {s.lectures} Lectures · {s.teacher}
-              </div>
-            </div>
-            {s.plannerUrl ? (
-              <a
-                href={s.plannerUrl}
-                download
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-lg bg-ink px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
-              >
-                <Download size={14} /> Download
-              </a>
-            ) : (
-              <button
-                disabled
-                className="flex items-center gap-1.5 rounded-lg bg-ink px-3 py-2 text-xs font-semibold text-white opacity-50 cursor-not-allowed"
-              >
-                <Download size={14} /> Download
-              </button>
-            )}
+    <Card title="Classes Schedule">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-brand-700 shadow-soft">
+            <FileText size={20} />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-ink">
+              {course.syllabusName || `${course.title} — Class Schedule`}
+            </p>
+            <p className="text-xs text-ink-muted">
+              {formatClassDays(course.classDays)} ·{" "}
+              {formatClassWindow(course.classStartTime, course.classEndTime)}
+            </p>
           </div>
-        ))}
+        </div>
+        <a
+          href={course.syllabusUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          download
+          className="flex items-center gap-1.5 rounded-lg bg-ink px-4 py-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          <Download size={14} /> Download
+        </a>
       </div>
     </Card>
   );

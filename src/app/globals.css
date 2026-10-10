@@ -79,3 +79,20 @@
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-ink-muted/40;
 }
+
+/*
+ * Defer offscreen rendering work.
+ *
+ * Long marketing and catalogue pages paint every section up front even though
+ * only the first screen is visible. `content-visibility: auto` lets the browser
+ * skip layout, style and paint for a section until it nears the viewport;
+ * `contain-intrinsic-size` reserves an approximate height so the scrollbar and
+ * anchor links stay stable while it is skipped.
+ *
+ * Applied to below-the-fold sections only — never to anything in the first
+ * screen, where it would delay the content the user is waiting for.
+ */
+.defer-offscreen {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
